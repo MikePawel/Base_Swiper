@@ -20,6 +20,7 @@ import { CardData } from "~/data/dummyCards";
 import {
   fetchZoraExplore,
   transformZoraToCards,
+  ListType,
 } from "~/components/wallet/test";
 
 type TabType = "swipe" | "buylist" | "wallet";
@@ -40,7 +41,23 @@ export default function Demo() {
     useState<WalletPageType>("list");
   const [capabilities, setCapabilities] = useState<any>(null);
   const [buyList, setBuyList] = useState<CardData[]>([]);
-  const [zoraCards, setZoraCards] = useState<CardData[]>([]);
+  const [newCards, setNewCards] = useState<CardData[]>([]);
+  const [valuableCards, setValuableCards] = useState<CardData[]>([]);
+  const [gainersCards, setGainersCards] = useState<CardData[]>([]);
+  const [listType, setListType] = useState<ListType>("NEW");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showTabMenu, setShowTabMenu] = useState(false);
+
+  // Track swipe progress for each filter
+  const [swipeProgress, setSwipeProgress] = useState<{
+    NEW: number;
+    MOST_VALUABLE: number;
+    TOP_GAINERS: number;
+  }>({
+    NEW: -1,
+    MOST_VALUABLE: -1,
+    TOP_GAINERS: -1,
+  });
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -64,17 +81,53 @@ export default function Demo() {
     getCapabilities();
   }, []);
 
-  // Fetch Zora data on mount
+  // Fetch all Zora data on mount
   useEffect(() => {
-    const getZoraData = async () => {
-      const data = await fetchZoraExplore();
-      if (data) {
-        const cards = transformZoraToCards(data);
-        setZoraCards(cards);
+    const getAllZoraData = async () => {
+      setIsInitialLoading(true);
+
+      // Fetch all three types in parallel
+      const [newData, valuableData, gainersData] = await Promise.all([
+        fetchZoraExplore("NEW"),
+        fetchZoraExplore("MOST_VALUABLE"),
+        fetchZoraExplore("TOP_GAINERS"),
+      ]);
+
+      if (newData) {
+        const cards = transformZoraToCards(newData);
+        setNewCards(cards);
+      }
+
+      if (valuableData) {
+        const cards = transformZoraToCards(valuableData);
+        setValuableCards(cards);
+      }
+
+      if (gainersData) {
+        const cards = transformZoraToCards(gainersData);
+        setGainersCards(cards);
+      }
+
+      setIsInitialLoading(false);
+    };
+
+    getAllZoraData();
+  }, []);
+
+  // Close tab menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTabMenu) {
+        const target = event.target as HTMLElement;
+        if (!target.closest(".tab-menu-container")) {
+          setShowTabMenu(false);
+        }
       }
     };
-    getZoraData();
-  }, []);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showTabMenu]);
 
   const WalletActionsComponent = () => (
     <div className="space-y-4">
@@ -108,6 +161,7 @@ export default function Demo() {
     }
 
     setActiveTab(tab);
+    setShowTabMenu(false);
     if (tab === "wallet") {
       setCurrentWalletPage("list");
     }
@@ -135,6 +189,55 @@ export default function Demo() {
     setCurrentWalletPage("list");
   };
 
+  const handleListTypeChange = async (newListType: ListType) => {
+    // Add haptic feedback for list type change
+    try {
+      await sdk.haptics.selectionChanged();
+    } catch (error) {
+      console.log("Haptics not supported:", error);
+    }
+
+    setListType(newListType);
+  };
+
+  // Get the current cards based on selected filter
+  const getCurrentCards = (): CardData[] => {
+    switch (listType) {
+      case "NEW":
+        return newCards;
+      case "MOST_VALUABLE":
+        return valuableCards;
+      case "TOP_GAINERS":
+        return gainersCards;
+      default:
+        return newCards;
+    }
+  };
+
+  // Update swipe progress when cards are swiped
+  const handleSwipeProgress = (currentIndex: number) => {
+    setSwipeProgress((prev) => ({
+      ...prev,
+      [listType]: currentIndex,
+    }));
+  };
+
+  // Initialize swipe progress when data loads
+  useEffect(() => {
+    if (!isInitialLoading) {
+      setSwipeProgress({
+        NEW: newCards.length - 1,
+        MOST_VALUABLE: valuableCards.length - 1,
+        TOP_GAINERS: gainersCards.length - 1,
+      });
+    }
+  }, [
+    isInitialLoading,
+    newCards.length,
+    valuableCards.length,
+    gainersCards.length,
+  ]);
+
   return (
     <div
       style={{
@@ -153,59 +256,109 @@ export default function Demo() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/base-logo.png" alt="Base" className="h-8 object-contain" />
 
-          {/* Profile picture - only show if context data is available */}
-          {frameContext?.context &&
-            (frameContext.context as any)?.user?.pfpUrl && (
+          <div className="flex items-center gap-3">
+            {/* Tab Navigation Menu Icon */}
+            <div className="relative tab-menu-container">
               <button
-                onClick={() =>
-                  sdk.actions.viewProfile({
-                    fid: (frameContext.context as any).user.fid,
-                  })
-                }
-                className="flex-shrink-0"
+                onClick={() => setShowTabMenu(!showTabMenu)}
+                className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={(frameContext.context as any).user.pfpUrl}
-                  alt="Profile"
-                  className="h-8 w-8 rounded-full object-cover"
-                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
               </button>
-            )}
-        </div>
 
-        <div className="mb-6 mt-4">
-          <div className="flex gap-2 p-1 bg-white border border-border rounded-lg">
-            <button
-              onClick={() => handleTabChange("swipe")}
-              className={`flex-1 py-2 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                activeTab === "swipe"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background"
-              }`}
-            >
-              Swipe
-            </button>
-            <button
-              onClick={() => handleTabChange("wallet")}
-              className={`flex-1 py-2 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                activeTab === "wallet"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background"
-              }`}
-            >
-              Wallet
-            </button>
-            <button
-              onClick={() => handleTabChange("buylist")}
-              className={`flex-1 py-2 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                activeTab === "buylist"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background"
-              }`}
-            >
-              Buy List
-            </button>
+              {/* Dropdown Menu for Tab Navigation */}
+              {showTabMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="py-1">
+                    <button
+                      onClick={() => handleTabChange("swipe")}
+                      className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+                        activeTab === "swipe" ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <span className="text-xl">🔄</span>
+                      <div>
+                        <div className="font-medium text-sm">Swipe</div>
+                        <div className="text-xs text-muted-foreground">
+                          Discover tokens
+                        </div>
+                      </div>
+                      {activeTab === "swipe" && (
+                        <span className="ml-auto text-primary">✓</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleTabChange("wallet")}
+                      className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+                        activeTab === "wallet" ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <span className="text-xl">👛</span>
+                      <div>
+                        <div className="font-medium text-sm">Wallet</div>
+                        <div className="text-xs text-muted-foreground">
+                          Manage wallet
+                        </div>
+                      </div>
+                      {activeTab === "wallet" && (
+                        <span className="ml-auto text-primary">✓</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleTabChange("buylist")}
+                      className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+                        activeTab === "buylist" ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <span className="text-xl">🛒</span>
+                      <div>
+                        <div className="font-medium text-sm">Buy List</div>
+                        <div className="text-xs text-muted-foreground">
+                          Your selections
+                        </div>
+                      </div>
+                      {activeTab === "buylist" && (
+                        <span className="ml-auto text-primary">✓</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profile picture - only show if context data is available */}
+            {frameContext?.context &&
+              (frameContext.context as any)?.user?.pfpUrl && (
+                <button
+                  onClick={() =>
+                    sdk.actions.viewProfile({
+                      fid: (frameContext.context as any).user.fid,
+                    })
+                  }
+                  className="flex-shrink-0"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={(frameContext.context as any).user.pfpUrl}
+                    alt="Profile"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                </button>
+              )}
           </div>
         </div>
 
@@ -215,19 +368,70 @@ export default function Demo() {
               <h2 className="text-2xl font-bold text-foreground mb-2">
                 Discover & Buy
               </h2>
-              <p className="text-sm text-muted-foreground">
-                {zoraCards.length > 0
-                  ? "Swipe right to buy, left to pass • Live from Zora"
-                  : "Loading tokens from Zora..."}
+              <p className="text-sm text-muted-foreground mb-4">
+                Swipe right to buy, left to pass • Live from Zora
               </p>
+
+              {/* List Type Toggle */}
+              {!isInitialLoading && (
+                <div className="flex gap-2 p-1 bg-white border border-border rounded-lg">
+                  <button
+                    onClick={() => handleListTypeChange("NEW")}
+                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
+                      listType === "NEW"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }`}
+                  >
+                    🆕 New
+                  </button>
+                  <button
+                    onClick={() => handleListTypeChange("MOST_VALUABLE")}
+                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
+                      listType === "MOST_VALUABLE"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }`}
+                  >
+                    💎 Valuable
+                  </button>
+                  <button
+                    onClick={() => handleListTypeChange("TOP_GAINERS")}
+                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
+                      listType === "TOP_GAINERS"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background"
+                    }`}
+                  >
+                    📈 Gainers
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Swipe Cards */}
-            <SwipeCards
-              cards={zoraCards.length > 0 ? zoraCards : undefined}
-              onBuy={handleBuy}
-              onPass={handlePass}
-            />
+            {/* Initial Loading State */}
+            {isInitialLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">⏳</div>
+                  <p className="text-sm text-muted-foreground">
+                    Loading tokens...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Swipe Cards */
+              <SwipeCards
+                key={listType}
+                cards={
+                  getCurrentCards().length > 0 ? getCurrentCards() : undefined
+                }
+                initialIndex={swipeProgress[listType]}
+                onBuy={handleBuy}
+                onPass={handlePass}
+                onIndexChange={handleSwipeProgress}
+              />
+            )}
           </div>
         )}
 
@@ -265,14 +469,9 @@ export default function Demo() {
                         style={{ backgroundImage: `url(${item.imageUrl})` }}
                       />
                       <div className="flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-foreground">
-                            {item.name}
-                          </h3>
-                          <span className="text-green-600 font-bold">
-                            {item.price}
-                          </span>
-                        </div>
+                        <h3 className="font-semibold text-foreground mb-2">
+                          {item.name}
+                        </h3>
                         <p className="text-sm text-muted-foreground mb-2">
                           {item.description}
                         </p>

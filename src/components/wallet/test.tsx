@@ -1,9 +1,11 @@
 import { CardData } from "~/data/dummyCards";
 
-export async function fetchZoraExplore() {
+export type ListType = "NEW" | "MOST_VALUABLE" | "TOP_GAINERS";
+
+export async function fetchZoraExplore(listType: ListType = "NEW") {
   try {
     const response = await fetch(
-      "https://api-sdk.zora.engineering/explore?listType=NEW&count=20",
+      `https://api-sdk.zora.engineering/explore?listType=${listType}&count=20`,
       {
         headers: {
           accept: "application/json",
@@ -42,20 +44,12 @@ export function transformZoraToCards(zoraData: any): CardData[] {
       token.description ||
       `Created by ${creatorHandle} • Token: ${tokenAddress}`;
 
-    // Get price information
-    let price = "Free";
-    if (token.tokenPrice?.priceInUsdc) {
-      price = `$${token.tokenPrice.priceInUsdc}`;
-    } else if (token.marketCap && token.marketCap !== "0") {
-      price = `Market Cap: $${parseFloat(token.marketCap).toFixed(2)}`;
-    }
-
     return {
       id: index + 1,
       name: token.name || "Unnamed Token",
       description,
       imageUrl,
-      price,
+      price: "",
       category: token.creatorProfile?.handle || "Token",
     };
   });

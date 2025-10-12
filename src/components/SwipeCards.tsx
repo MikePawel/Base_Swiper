@@ -9,32 +9,47 @@ interface SwipeCardsProps {
   onBuy?: (card: CardData) => void;
   onPass?: (card: CardData) => void;
   cards?: CardData[];
+  initialIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 const SwipeCards: React.FC<SwipeCardsProps> = ({
   onBuy,
   onPass,
   cards: initialCards,
+  initialIndex,
+  onIndexChange,
 }) => {
   const cardsData =
     initialCards && initialCards.length > 0 ? initialCards : dummyCards;
   const [cards, setCards] = useState<CardData[]>([...cardsData]);
-  const [currentIndex, setCurrentIndex] = useState(cardsData.length - 1);
+  const [currentIndex, setCurrentIndex] = useState(
+    initialIndex !== undefined && initialIndex >= 0
+      ? initialIndex
+      : cardsData.length - 1
+  );
   const [resetKey, setResetKey] = useState(0);
   const currentIndexRef = useRef(currentIndex);
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
     currentIndexRef.current = val;
+    if (onIndexChange) {
+      onIndexChange(val);
+    }
   };
 
-  // Update cards when initialCards changes
+  // Initialize with saved index
   React.useEffect(() => {
     if (initialCards && initialCards.length > 0) {
       setCards([...initialCards]);
-      updateCurrentIndex(initialCards.length - 1);
+      const startIndex =
+        initialIndex !== undefined && initialIndex >= 0
+          ? initialIndex
+          : initialCards.length - 1;
+      updateCurrentIndex(startIndex);
     }
-  }, [initialCards]);
+  }, [initialCards, initialIndex]);
 
   const childRefs = useMemo(
     () =>
@@ -124,12 +139,9 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
 
                   {/* Card Content */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2">
                       <span className="px-3 py-1 bg-blue-500/80 backdrop-blur-sm rounded-full text-xs font-semibold">
                         {card.category}
-                      </span>
-                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-bold">
-                        {card.price}
                       </span>
                     </div>
                     <h3 className="text-2xl font-bold mb-2">{card.name}</h3>
