@@ -8,28 +8,43 @@ import { sdk } from "@farcaster/miniapp-sdk";
 interface SwipeCardsProps {
   onBuy?: (card: CardData) => void;
   onPass?: (card: CardData) => void;
+  cards?: CardData[];
 }
 
-const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
-  const [cards, setCards] = useState<CardData[]>([...dummyCards]);
-  const [currentIndex, setCurrentIndex] = useState(dummyCards.length - 1);
+const SwipeCards: React.FC<SwipeCardsProps> = ({
+  onBuy,
+  onPass,
+  cards: initialCards,
+}) => {
+  const cardsData =
+    initialCards && initialCards.length > 0 ? initialCards : dummyCards;
+  const [cards, setCards] = useState<CardData[]>([...cardsData]);
+  const [currentIndex, setCurrentIndex] = useState(cardsData.length - 1);
   const [resetKey, setResetKey] = useState(0);
   const currentIndexRef = useRef(currentIndex);
-
-  const childRefs = useMemo(
-    () =>
-      Array(dummyCards.length)
-        .fill(0)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map(() => React.createRef<any>()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [resetKey]
-  );
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
     currentIndexRef.current = val;
   };
+
+  // Update cards when initialCards changes
+  React.useEffect(() => {
+    if (initialCards && initialCards.length > 0) {
+      setCards([...initialCards]);
+      updateCurrentIndex(initialCards.length - 1);
+    }
+  }, [initialCards]);
+
+  const childRefs = useMemo(
+    () =>
+      Array(cards.length)
+        .fill(0)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map(() => React.createRef<any>()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resetKey, cards.length]
+  );
 
   const swiped = async (direction: string, cardData: CardData) => {
     updateCurrentIndex(currentIndexRef.current - 1);
@@ -54,8 +69,8 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
   };
 
   const handleStartOver = () => {
-    setCards([...dummyCards]);
-    updateCurrentIndex(dummyCards.length - 1);
+    setCards([...cardsData]);
+    updateCurrentIndex(cardsData.length - 1);
     setResetKey((prev) => prev + 1);
   };
 

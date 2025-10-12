@@ -22,13 +22,19 @@ import { SignInWithBaseButton } from "@base-org/account-ui/react";
 import { createBaseAccountSDK } from "@base-org/account";
 import { METADATA } from "~/lib/utils";
 import { SiweMessage } from "siwe";
+import { setApiKey } from "@zoralabs/coins-sdk";
+
+// Set up your API key before making any SDK requests
+if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
+  setApiKey(process.env.NEXT_PUBLIC_ZORA_API_KEY);
+}
 
 // dylsteck.base.eth
 const RECIPIENT_ADDRESS = "0x8342A48694A74044116F330db5050a267b28dD85";
 
 const baseAccountSDK = createBaseAccountSDK({
   appName: METADATA.name,
-  appLogoUrl: METADATA.iconImageUrl
+  appLogoUrl: METADATA.iconImageUrl,
 });
 
 const renderError = (error: Error | null): React.ReactElement | null => {
@@ -55,10 +61,10 @@ export function WalletConnect() {
 
   const handleBaseSignIn = async () => {
     try {
-      await baseAccountSDK.getProvider().request({ method: 'wallet_connect' });
+      await baseAccountSDK.getProvider().request({ method: "wallet_connect" });
       setBaseSignedIn(true);
     } catch (error) {
-      console.error('Base sign in failed:', error);
+      console.error("Base sign in failed:", error);
     }
   };
 
@@ -79,7 +85,7 @@ export function WalletConnect() {
 
       {/* Base Account Sign In Button */}
       <div className="mb-4">
-        <SignInWithBaseButton 
+        <SignInWithBaseButton
           align="center"
           variant="solid"
           colorScheme="light"
@@ -97,7 +103,9 @@ export function WalletConnect() {
           <div className="flex justify-between items-center text-sm">
             <div>
               <span className="text-muted-foreground">Address:</span>
-              <div className="font-mono text-foreground mt-1">{truncateAddress(address)}</div>
+              <div className="font-mono text-foreground mt-1">
+                {truncateAddress(address)}
+              </div>
             </div>
             <div className="text-right">
               <span className="text-muted-foreground">Chain:</span>
@@ -241,7 +249,9 @@ export function SendEth() {
       {data && (
         <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
           <div className="text-gray-600 mb-1">Response</div>
-          <div className="text-green-600 font-mono break-all">Hash: {truncateAddress(data)}</div>
+          <div className="text-green-600 font-mono break-all">
+            Hash: {truncateAddress(data)}
+          </div>
           <div className="text-green-600 font-mono">
             Status:{" "}
             {isConfirming
@@ -366,7 +376,9 @@ export function SendTransaction() {
       {txHash && (
         <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
           <div className="text-gray-600 mb-1">Response</div>
-          <div className="text-green-600 font-mono break-all">Hash: {truncateAddress(txHash)}</div>
+          <div className="text-green-600 font-mono break-all">
+            Hash: {truncateAddress(txHash)}
+          </div>
           <div className="text-green-600 font-mono">
             Status:{" "}
             {isConfirming
@@ -380,5 +392,3 @@ export function SendTransaction() {
     </>
   );
 }
-
- 

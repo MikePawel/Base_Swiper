@@ -17,6 +17,10 @@ import {
 import { BasePay } from "~/components/wallet/BasePay";
 import SwipeCards from "~/components/SwipeCards";
 import { CardData } from "~/data/dummyCards";
+import {
+  fetchZoraExplore,
+  transformZoraToCards,
+} from "~/components/wallet/test";
 
 type TabType = "swipe" | "buylist" | "wallet";
 type WalletPageType = "list" | "basepay" | "wallet";
@@ -36,6 +40,7 @@ export default function Demo() {
     useState<WalletPageType>("list");
   const [capabilities, setCapabilities] = useState<any>(null);
   const [buyList, setBuyList] = useState<CardData[]>([]);
+  const [zoraCards, setZoraCards] = useState<CardData[]>([]);
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -57,6 +62,18 @@ export default function Demo() {
       }
     };
     getCapabilities();
+  }, []);
+
+  // Fetch Zora data on mount
+  useEffect(() => {
+    const getZoraData = async () => {
+      const data = await fetchZoraExplore();
+      if (data) {
+        const cards = transformZoraToCards(data);
+        setZoraCards(cards);
+      }
+    };
+    getZoraData();
   }, []);
 
   const WalletActionsComponent = () => (
@@ -199,12 +216,18 @@ export default function Demo() {
                 Discover & Buy
               </h2>
               <p className="text-sm text-muted-foreground">
-                Swipe right to buy, left to pass
+                {zoraCards.length > 0
+                  ? "Swipe right to buy, left to pass • Live from Zora"
+                  : "Loading tokens from Zora..."}
               </p>
             </div>
 
             {/* Swipe Cards */}
-            <SwipeCards onBuy={handleBuy} onPass={handlePass} />
+            <SwipeCards
+              cards={zoraCards.length > 0 ? zoraCards : undefined}
+              onBuy={handleBuy}
+              onPass={handlePass}
+            />
           </div>
         )}
 
