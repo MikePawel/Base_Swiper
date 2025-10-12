@@ -20,7 +20,9 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
     () =>
       Array(dummyCards.length)
         .fill(0)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map(() => React.createRef<any>()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [resetKey]
   );
 
@@ -28,8 +30,6 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
     setCurrentIndex(val);
     currentIndexRef.current = val;
   };
-
-  const canSwipe = currentIndex >= 0;
 
   const swiped = async (direction: string, cardData: CardData) => {
     updateCurrentIndex(currentIndexRef.current - 1);
@@ -51,12 +51,6 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
 
   const outOfFrame = (cardName: string) => {
     console.log(`${cardName} left the screen!`);
-  };
-
-  const swipe = async (dir: "left" | "right") => {
-    if (canSwipe && currentIndex < cards.length) {
-      await childRefs[currentIndex].current.swipe(dir);
-    }
   };
 
   const handleStartOver = () => {
@@ -84,66 +78,67 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
           const opacity = 1 - distanceFromTop * 0.2;
 
           return (
-            <TinderCard
-              ref={childRefs[index]}
+            <div
               key={`${resetKey}-${card.id}`}
-              onSwipe={(dir) => swiped(dir, card)}
-              onCardLeftScreen={() => outOfFrame(card.name)}
-              preventSwipe={["up", "down"]}
               className="absolute w-full"
-              style={{
-                zIndex: index,
-              }}
+              style={{ zIndex: index }}
             >
-              <div
-                className="relative bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
-                style={{
-                  width: "100%",
-                  height: "500px",
-                  backgroundImage: `url(${card.imageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  transform: !isTopCard
-                    ? `scale(${scale}) translateY(${translateY}px)`
-                    : "scale(1)",
-                  opacity: opacity,
-                  pointerEvents: isTopCard ? "auto" : "none",
-                }}
+              <TinderCard
+                ref={childRefs[index]}
+                onSwipe={(dir) => swiped(dir, card)}
+                onCardLeftScreen={() => outOfFrame(card.name)}
+                preventSwipe={["up", "down"]}
               >
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div
+                  className="relative bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
+                  style={{
+                    width: "100%",
+                    height: "500px",
+                    backgroundImage: `url(${card.imageUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    transform: !isTopCard
+                      ? `scale(${scale}) translateY(${translateY}px)`
+                      : "scale(1)",
+                    opacity: opacity,
+                    pointerEvents: isTopCard ? "auto" : "none",
+                  }}
+                >
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                {/* Card Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-3 py-1 bg-blue-500/80 backdrop-blur-sm rounded-full text-xs font-semibold">
-                      {card.category}
-                    </span>
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-bold">
-                      {card.price}
-                    </span>
+                  {/* Card Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-3 py-1 bg-blue-500/80 backdrop-blur-sm rounded-full text-xs font-semibold">
+                        {card.category}
+                      </span>
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-bold">
+                        {card.price}
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">{card.name}</h3>
+                    <p className="text-white/90 text-sm">{card.description}</p>
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">{card.name}</h3>
-                  <p className="text-white/90 text-sm">{card.description}</p>
-                </div>
 
-                {/* Swipe Direction Indicators */}
-                <div className="absolute top-1/4 left-8 transform -rotate-12">
-                  <div className="px-6 py-3 border-4 border-red-500 rounded-2xl opacity-0 swipe-left-indicator">
-                    <span className="text-red-500 text-3xl font-bold">
-                      PASS
-                    </span>
+                  {/* Swipe Direction Indicators */}
+                  <div className="absolute top-1/4 left-8 transform -rotate-12">
+                    <div className="px-6 py-3 border-4 border-red-500 rounded-2xl opacity-0 swipe-left-indicator">
+                      <span className="text-red-500 text-3xl font-bold">
+                        PASS
+                      </span>
+                    </div>
+                  </div>
+                  <div className="absolute top-1/4 right-8 transform rotate-12">
+                    <div className="px-6 py-3 border-4 border-green-500 rounded-2xl opacity-0 swipe-right-indicator">
+                      <span className="text-green-500 text-3xl font-bold">
+                        BUY
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="absolute top-1/4 right-8 transform rotate-12">
-                  <div className="px-6 py-3 border-4 border-green-500 rounded-2xl opacity-0 swipe-right-indicator">
-                    <span className="text-green-500 text-3xl font-bold">
-                      BUY
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </TinderCard>
+              </TinderCard>
+            </div>
           );
         })}
 
@@ -155,7 +150,7 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({ onBuy, onPass }) => {
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
                 All Done!
               </h3>
-              <p className="text-gray-600">You've reviewed all items</p>
+              <p className="text-gray-600">You&apos;ve reviewed all items</p>
               <button
                 onClick={handleStartOver}
                 className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors"

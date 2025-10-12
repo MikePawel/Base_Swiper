@@ -36,7 +36,6 @@ export default function Demo() {
     useState<WalletPageType>("list");
   const [capabilities, setCapabilities] = useState<any>(null);
   const [buyList, setBuyList] = useState<CardData[]>([]);
-  const [passedList, setPassedList] = useState<CardData[]>([]);
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -44,7 +43,6 @@ export default function Demo() {
   };
 
   const handlePass = (card: CardData) => {
-    setPassedList((prev) => [...prev, card]);
     console.log("Passed:", card);
   };
 
