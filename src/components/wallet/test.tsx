@@ -2,6 +2,30 @@ import { CardData } from "~/data/dummyCards";
 
 export type ListType = "NEW" | "MOST_VALUABLE" | "TOP_GAINERS";
 
+interface ZoraToken {
+  node: {
+    name?: string;
+    description?: string;
+    address?: string;
+    creatorProfile?: {
+      handle?: string;
+    };
+    mediaContent?: {
+      previewImage?: {
+        medium?: string;
+        small?: string;
+      };
+      originalUri?: string;
+    };
+  };
+}
+
+interface ZoraApiResponse {
+  exploreList?: {
+    edges?: ZoraToken[];
+  };
+}
+
 export async function fetchZoraExplore(listType: ListType = "NEW") {
   try {
     const response = await fetch(
@@ -20,12 +44,12 @@ export async function fetchZoraExplore(listType: ListType = "NEW") {
   }
 }
 
-export function transformZoraToCards(zoraData: any): CardData[] {
+export function transformZoraToCards(zoraData: ZoraApiResponse): CardData[] {
   if (!zoraData?.exploreList?.edges) {
     return [];
   }
 
-  return zoraData.exploreList.edges.map((edge: any, index: number) => {
+  return zoraData.exploreList.edges.map((edge: ZoraToken, index: number) => {
     const token = edge.node;
 
     // Get image URL from mediaContent
