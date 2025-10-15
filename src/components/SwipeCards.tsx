@@ -244,20 +244,26 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
                           </svg>
                           <span className="text-white/90 text-sm">
                             {(() => {
-                              const value = parseFloat(card.coinData.marketCap);
-                              if (isNaN(value)) return "N/A";
-                              if (value >= 1000000)
-                                return `$${(value / 1000000).toFixed(1)}M`;
-                              if (value >= 1000)
-                                return `$${(value / 1000).toFixed(1)}K`;
-                              return `$${value.toFixed(0)}`;
+                              try {
+                                const value = parseFloat(
+                                  card.coinData.marketCap
+                                );
+                                if (isNaN(value)) return "N/A";
+                                if (value >= 1000000)
+                                  return `$${(value / 1000000).toFixed(1)}M`;
+                                if (value >= 1000)
+                                  return `$${(value / 1000).toFixed(1)}K`;
+                                return `$${value.toFixed(0)}`;
+                              } catch {
+                                return "N/A";
+                              }
                             })()}
                           </span>
                         </div>
                       )}
 
                       {/* Holders */}
-                      {card.coinData?.uniqueHolders && (
+                      {card.coinData?.uniqueHolders != null && (
                         <div className="flex items-center gap-1">
                           <svg
                             className="w-4 h-4 text-white/80"
@@ -273,7 +279,9 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
                             />
                           </svg>
                           <span className="text-white/90 text-sm">
-                            {card.coinData.uniqueHolders.toLocaleString()}
+                            {typeof card.coinData.uniqueHolders === "number"
+                              ? card.coinData.uniqueHolders.toLocaleString()
+                              : card.coinData.uniqueHolders}
                           </span>
                         </div>
                       )}
