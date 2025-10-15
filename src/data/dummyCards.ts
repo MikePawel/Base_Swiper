@@ -5,6 +5,18 @@ export interface CardData {
   imageUrl: string;
   price: string;
   category: string;
+  // Extended coin data for detailed view
+  coinData?: {
+    address: string;
+    symbol?: string;
+    totalSupply?: string;
+    marketCap?: string;
+    volume24h?: string;
+    uniqueHolders?: number;
+    creatorAddress?: string;
+    createdAt?: string;
+    chainId?: number;
+  };
 }
 
 export const dummyCards: CardData[] = [

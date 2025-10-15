@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef } from "react";
 import TinderCard from "react-tinder-card";
 import { CardData, dummyCards } from "~/data/dummyCards";
 import { sdk } from "@farcaster/miniapp-sdk";
+import CoinDetailModal from "./CoinDetailModal";
 
 interface SwipeCardsProps {
   onBuy?: (card: CardData) => void;
@@ -30,6 +31,11 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
   );
   const [resetKey, setResetKey] = useState(0);
   const currentIndexRef = useRef(currentIndex);
+  const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Track touch/mouse position to detect tap vs drag
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
   const updateCurrentIndex = (val: number) => {
     setCurrentIndex(val);
@@ -89,6 +95,47 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
     setResetKey((prev) => prev + 1);
   };
 
+  const handleCardClick = (card: CardData) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedCard(null), 300); // Delay clearing to allow animation
+  };
+
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const pos =
+      "touches" in e
+        ? { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY }
+        : { x: e.clientX, y: e.clientY };
+    touchStartPos.current = pos;
+  };
+
+  const handleTouchEnd = (
+    e: React.TouchEvent | React.MouseEvent,
+    card: CardData
+  ) => {
+    if (!touchStartPos.current) return;
+
+    const endPos =
+      "changedTouches" in e
+        ? { x: e.changedTouches[0]!.clientX, y: e.changedTouches[0]!.clientY }
+        : { x: e.clientX, y: e.clientY };
+
+    // Calculate distance moved
+    const deltaX = Math.abs(endPos.x - touchStartPos.current.x);
+    const deltaY = Math.abs(endPos.y - touchStartPos.current.y);
+
+    // If movement is less than 10px, consider it a tap
+    if (deltaX < 10 && deltaY < 10) {
+      handleCardClick(card);
+    }
+
+    touchStartPos.current = null;
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center">
       {/* Cards Container */}
@@ -121,6 +168,14 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
               >
                 <div
                   className="relative bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
+                  onTouchStart={isTopCard ? handleTouchStart : undefined}
+                  onTouchEnd={
+                    isTopCard ? (e) => handleTouchEnd(e, card) : undefined
+                  }
+                  onMouseDown={isTopCard ? handleTouchStart : undefined}
+                  onMouseUp={
+                    isTopCard ? (e) => handleTouchEnd(e, card) : undefined
+                  }
                   style={{
                     width: "100%",
                     height: "500px",
@@ -132,6 +187,7 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
                       : "scale(1)",
                     opacity: opacity,
                     pointerEvents: isTopCard ? "auto" : "none",
+                    cursor: isTopCard ? "pointer" : "default",
                   }}
                 >
                   {/* Gradient Overlay */}
@@ -139,13 +195,93 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
 
                   {/* Card Content */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                    <div className="mb-2">
+                    <div className="mb-3">
                       <span className="px-3 py-1 bg-blue-500/80 backdrop-blur-sm rounded-full text-xs font-semibold">
                         {card.category}
                       </span>
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">{card.name}</h3>
-                    <p className="text-white/90 text-sm">{card.description}</p>
+                    <h3 className="text-2xl font-bold mb-3">{card.name}</h3>
+
+                    {/* Key Metrics */}
+                    <div className="flex items-center gap-4 mb-2">
+                      {/* Price */}
+                      {card.price && card.price !== "N/A" && (
+                        <div className="flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-green-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                            />
+                          </svg>
+                          <span className="text-green-400 font-bold text-sm">
+                            {card.price}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Market Cap */}
+                      {card.coinData?.marketCap && (
+                        <div className="flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-white/80"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                            />
+                          </svg>
+                          <span className="text-white/90 text-sm">
+                            {(() => {
+                              const value = parseFloat(card.coinData.marketCap);
+                              if (isNaN(value)) return "N/A";
+                              if (value >= 1000000)
+                                return `$${(value / 1000000).toFixed(1)}M`;
+                              if (value >= 1000)
+                                return `$${(value / 1000).toFixed(1)}K`;
+                              return `$${value.toFixed(0)}`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Holders */}
+                      {card.coinData?.uniqueHolders && (
+                        <div className="flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-white/80"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            />
+                          </svg>
+                          <span className="text-white/90 text-sm">
+                            {card.coinData.uniqueHolders.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-white/70 text-xs mt-2 italic">
+                      Tap for details
+                    </p>
                   </div>
 
                   {/* Swipe Direction Indicators */}
@@ -207,6 +343,21 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
           transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
       `}</style>
+
+      {/* Coin Detail Modal */}
+      {selectedCard && (
+        <CoinDetailModal
+          card={selectedCard}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onBuy={() => {
+            onBuy?.(selectedCard);
+          }}
+          onSkip={() => {
+            onPass?.(selectedCard);
+          }}
+        />
+      )}
     </div>
   );
 };
