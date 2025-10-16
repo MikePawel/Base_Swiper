@@ -50,6 +50,7 @@ export default function Demo() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
+  const [hasTriedLoadingNew, setHasTriedLoadingNew] = useState(false);
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -124,6 +125,7 @@ export default function Demo() {
             case 3:
               listType = "NEW";
               console.log("Loading 20 NEW cards...");
+              setHasTriedLoadingNew(true);
               // Stay at step 3 to keep loading NEW cards
               break;
 
@@ -143,6 +145,9 @@ export default function Demo() {
                 allCards.length + newCards.length
               }`
             );
+          } else if (loadingStep === 3) {
+            // No more NEW cards available
+            console.log("No more NEW cards available");
           }
 
           // Only increment step if not at final step (NEW cards)
@@ -181,12 +186,32 @@ export default function Demo() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTabMenu]);
 
-  // Detect when all cards are done
+  // Detect when all cards are done (only after going through all phases)
   useEffect(() => {
-    if (!isInitialLoading && currentIndex < 0 && allCards.length > 0) {
+    // Only show popup when:
+    // 1. We've reached the NEW cards phase (step 3)
+    // 2. We've tried loading NEW cards
+    // 3. User has swiped through all cards (currentIndex < 0)
+    // 4. We have loaded at least 60 cards (the curated sequence)
+    // 5. Not currently in initial loading
+    if (
+      !isInitialLoading &&
+      loadingStep === 3 &&
+      hasTriedLoadingNew &&
+      currentIndex < 0 &&
+      allCards.length >= 60 &&
+      !isLoadingBatch
+    ) {
       setShowAllDoneMessage(true);
     }
-  }, [currentIndex, isInitialLoading, allCards.length]);
+  }, [
+    currentIndex,
+    isInitialLoading,
+    allCards.length,
+    loadingStep,
+    hasTriedLoadingNew,
+    isLoadingBatch,
+  ]);
 
   const WalletActionsComponent = () => (
     <div className="space-y-4">
