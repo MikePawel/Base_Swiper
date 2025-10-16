@@ -46,9 +46,10 @@ export default function Demo() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
 
-  // Track loading sequence: Featured -> Gainers -> Valuable -> Volume -> NEW
+  // Track loading sequence: Featured -> Gainers -> Valuable -> NEW
   const [loadingStep, setLoadingStep] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
+  const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -121,14 +122,9 @@ export default function Demo() {
               break;
 
             case 3:
-              listType = "TOP_VOLUME";
-              console.log("Loading 20 TOP_VOLUME...");
-              break;
-
-            case 4:
               listType = "NEW";
               console.log("Loading 20 NEW cards...");
-              // Stay at step 4 to keep loading NEW cards
+              // Stay at step 3 to keep loading NEW cards
               break;
 
             default:
@@ -150,7 +146,7 @@ export default function Demo() {
           }
 
           // Only increment step if not at final step (NEW cards)
-          if (loadingStep < 4) {
+          if (loadingStep < 3) {
             setLoadingStep(loadingStep + 1);
           }
         } catch (error) {
@@ -184,6 +180,13 @@ export default function Demo() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTabMenu]);
+
+  // Detect when all cards are done
+  useEffect(() => {
+    if (!isInitialLoading && currentIndex < 0 && allCards.length > 0) {
+      setShowAllDoneMessage(true);
+    }
+  }, [currentIndex, isInitialLoading, allCards.length]);
 
   const WalletActionsComponent = () => (
     <div className="space-y-4">
@@ -384,13 +387,76 @@ export default function Demo() {
 
             {/* Initial Loading State */}
             {isInitialLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">⏳</div>
-                  <p className="text-sm text-muted-foreground">
-                    Loading featured tokens...
-                  </p>
+              <div className="flex justify-center items-center">
+                <div
+                  className="relative w-full max-w-sm mx-auto"
+                  style={{ height: "550px" }}
+                >
+                  {/* Animated Loading Cards */}
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="absolute left-0 right-0 bg-white border-2 border-gray-200 rounded-2xl shadow-2xl"
+                      style={{
+                        height: "500px",
+                        animation: `cardSwirl ${
+                          2 + i * 0.5
+                        }s ease-in-out infinite`,
+                        animationDelay: `${i * 0.3}s`,
+                        opacity: 1 - i * 0.15,
+                        top: `${i * 8}px`,
+                      }}
+                    >
+                      <div className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+                        {/* Skeleton Content */}
+                        <div className="w-full space-y-6">
+                          {/* Image skeleton */}
+                          <div className="w-32 h-32 mx-auto rounded-full bg-gray-300 animate-pulse" />
+
+                          {/* Title skeleton */}
+                          <div className="space-y-3">
+                            <div className="h-6 bg-gray-300 rounded-lg w-3/4 mx-auto animate-pulse" />
+                            <div className="h-4 bg-gray-300 rounded-lg w-full animate-pulse" />
+                            <div className="h-4 bg-gray-300 rounded-lg w-5/6 mx-auto animate-pulse" />
+                          </div>
+
+                          {/* Details skeleton */}
+                          <div className="pt-8 space-y-2">
+                            <div className="h-3 bg-gray-300 rounded w-1/2 mx-auto animate-pulse" />
+                            <div className="h-3 bg-gray-300 rounded w-2/3 mx-auto animate-pulse" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Loading Text */}
+                  <div className="absolute -bottom-8 left-0 right-0 text-center">
+                    <p className="text-sm text-muted-foreground animate-pulse">
+                      Loading amazing tokens...
+                    </p>
+                  </div>
                 </div>
+
+                <style jsx>{`
+                  @keyframes cardSwirl {
+                    0% {
+                      transform: translateY(0) rotate(0deg) scale(1);
+                    }
+                    25% {
+                      transform: translateY(-10px) rotate(3deg) scale(1.01);
+                    }
+                    50% {
+                      transform: translateY(0) rotate(0deg) scale(1);
+                    }
+                    75% {
+                      transform: translateY(-10px) rotate(-3deg) scale(1.01);
+                    }
+                    100% {
+                      transform: translateY(0) rotate(0deg) scale(1);
+                    }
+                  }
+                `}</style>
               </div>
             ) : (
               /* Swipe Cards - Infinite scroll */
@@ -401,6 +467,57 @@ export default function Demo() {
                 onPass={handlePass}
                 onIndexChange={handleSwipeProgress}
               />
+            )}
+
+            {/* All Done Popup */}
+            {showAllDoneMessage && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-scale-in">
+                  <div className="mb-6">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h2 className="text-2xl font-bold text-foreground mb-3">
+                      You&apos;re All Caught Up!
+                    </h2>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      You&apos;ve swiped through all available tokens. Come back
+                      in a bit for fresh new cards to discover!
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowAllDoneMessage(false)}
+                      className="w-full py-3 px-6 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Got it!
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab("buylist")}
+                      className="w-full py-3 px-6 bg-gray-100 text-foreground rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      View Buy List
+                    </button>
+                  </div>
+                </div>
+
+                <style jsx>{`
+                  @keyframes scale-in {
+                    from {
+                      opacity: 0;
+                      transform: scale(0.9);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: scale(1);
+                    }
+                  }
+
+                  .animate-scale-in {
+                    animation: scale-in 0.3s ease-out;
+                  }
+                `}</style>
+              </div>
             )}
           </div>
         )}
