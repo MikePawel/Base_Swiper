@@ -17,7 +17,6 @@ const chainConfig = {
 const web3AuthOptions: Web3AuthOptions = {
   clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "YOUR_CLIENT_ID", // Get your Client ID from Web3Auth Dashboard
   web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET, // Use SAPPHIRE_DEVNET for testing
-  chainConfig,
   uiConfig: {
     appName: "Base Swiper",
     mode: "light",
@@ -35,3 +34,4 @@ const web3AuthContextConfig: Web3AuthContextConfig = {
 };
 
 export default web3AuthContextConfig;
+export { chainConfig };
