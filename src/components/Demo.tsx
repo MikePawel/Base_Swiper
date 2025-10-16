@@ -46,7 +46,7 @@ export default function Demo() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
 
-  // Track loading sequence: FEATURED -> MOST_VALUABLE -> NEW (ONLY 3 STEPS!)
+  // Track loading sequence: FEATURED -> MOST_VALUABLE -> TOP_GAINERS -> NEW (4 STEPS!)
   const [loadingStep, setLoadingStep] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
@@ -117,7 +117,7 @@ export default function Demo() {
         let categoryKey = "";
 
         // Determine what to load based on loading step
-        // EXACT ORDER: FEATURED (step 0) -> MOST_VALUABLE (step 1) -> NEW (step 2)
+        // EXACT ORDER: FEATURED (step 0) -> MOST_VALUABLE (step 1) -> TOP_GAINERS (step 2) -> NEW (step 3)
         switch (loadingStep) {
           case 1:
             listType = "MOST_VALUABLE";
@@ -125,6 +125,11 @@ export default function Demo() {
             break;
 
           case 2:
+            listType = "TOP_GAINERS";
+            categoryKey = "TOP_GAINERS";
+            break;
+
+          case 3:
             listType = "NEW";
             categoryKey = "NEW";
             setHasTriedLoadingNew(true);
@@ -138,7 +143,7 @@ export default function Demo() {
         if (loadedCategories.has(categoryKey) && categoryKey !== "NEW") {
           console.log(`⚠️ ${categoryKey} already loaded, skipping...`);
           // Move to next step
-          if (loadingStep < 2) {
+          if (loadingStep < 3) {
             setLoadingStep(loadingStep + 1);
           }
           return;
@@ -165,10 +170,10 @@ export default function Demo() {
             );
 
             // Only increment step if not at final step (NEW cards)
-            if (loadingStep < 2) {
+            if (loadingStep < 3) {
               setLoadingStep(loadingStep + 1);
             }
-          } else if (loadingStep === 2) {
+          } else if (loadingStep === 3) {
             // No more NEW cards available
             console.log("❌ No more NEW cards available");
           }
@@ -208,17 +213,17 @@ export default function Demo() {
   // Detect when all cards are done (only after going through all phases)
   useEffect(() => {
     // Only show popup when:
-    // 1. We've reached the NEW cards phase (step 2)
+    // 1. We've reached the NEW cards phase (step 3)
     // 2. We've tried loading NEW cards
     // 3. User has swiped through all cards (currentIndex < 0)
-    // 4. We have loaded at least 40 cards (20 FEATURED + 20 MOST_VALUABLE)
+    // 4. We have loaded at least 60 cards (20 FEATURED + 20 MOST_VALUABLE + 20 TOP_GAINERS)
     // 5. Not currently in initial loading
     if (
       !isInitialLoading &&
-      loadingStep === 2 &&
+      loadingStep === 3 &&
       hasTriedLoadingNew &&
       currentIndex < 0 &&
-      allCards.length >= 40 &&
+      allCards.length >= 60 &&
       !isLoadingBatch
     ) {
       setShowAllDoneMessage(true);
