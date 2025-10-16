@@ -190,15 +190,16 @@ export function transformZoraToCards(zoraData: ZoraApiResponse): CardData[] {
 
     // Build description with creator and token info
     const creatorHandle = token.creatorProfile?.handle || "Unknown Creator";
-    const tokenAddress =
-      token.address?.slice(0, 6) + "..." + token.address?.slice(-4);
+    const tokenAddress = token.address
+      ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}`
+      : "N/A";
 
     const fullDescription =
       token.description ||
-      `Created by ${creatorHandle} • Token: ${tokenAddress}`;
+      `Created by @${creatorHandle}\nToken: ${tokenAddress}`;
 
-    // Truncate description to 120 characters for card display
-    const description = truncateText(fullDescription, 120);
+    // Truncate description to 150 characters for card display
+    const description = truncateText(fullDescription, 150);
 
     // Format market cap and volume for display
     const formatNumber = (num?: string) => {

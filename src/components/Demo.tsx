@@ -244,73 +244,89 @@ export default function Demo() {
   // Cards are displayed from END to START, so we build array in reverse: [NEW, MOST_VALUABLE, TOP_GAINERS, FEATURED]
   useEffect(() => {
     const loadCards = async () => {
-      setIsInitialLoading(true);
+      try {
+        setIsInitialLoading(true);
 
-      // STEP 1: Load FEATURED cards first (shows immediately)
-      console.log("🎬 Loading FEATURED cards...");
-      const featuredData = await fetchZoraExplore("FEATURED");
+        // STEP 1: Load FEATURED cards first (shows immediately)
+        console.log("🎬 Loading FEATURED cards...");
+        const featuredData = await fetchZoraExplore("FEATURED");
 
-      if (featuredData) {
-        const featuredCards = transformZoraToCards(featuredData);
-        const taggedFeatured = featuredCards.map((card) => ({
-          ...card,
-          category: "FEATURED" as ListType,
-        }));
+        if (featuredData && featuredData.exploreList?.edges) {
+          const featuredCards = transformZoraToCards(featuredData);
 
-        // For now, just show FEATURED cards
-        setAllCards(taggedFeatured);
-        setCurrentIndex(taggedFeatured.length - 1);
-        console.log(
-          `✅ Loaded ${featuredCards.length} FEATURED cards - Ready to swipe!`
-        );
-      }
+          if (featuredCards && featuredCards.length > 0) {
+            const taggedFeatured = featuredCards.map((card) => ({
+              ...card,
+              category: "FEATURED" as ListType,
+            }));
 
-      setIsInitialLoading(false);
-
-      // STEP 2: Load ALL remaining cards, then replace the entire array
-      const remainingCategories: ListType[] = [
-        "TOP_GAINERS",
-        "MOST_VALUABLE",
-        "NEW",
-      ];
-
-      const backgroundCards: CardData[] = [];
-
-      for (let i = 0; i < remainingCategories.length; i++) {
-        const category = remainingCategories[i]!;
-        console.log(`📥 Background loading ${category} cards...`);
-
-        const data = await fetchZoraExplore(category);
-
-        if (data) {
-          const cards = transformZoraToCards(data);
-          const taggedCards = cards.map((card) => ({
-            ...card,
-            category: category,
-          }));
-
-          backgroundCards.push(...taggedCards);
-          console.log(`✅ Loaded ${cards.length} ${category} cards`);
+            setAllCards(taggedFeatured);
+            setCurrentIndex(taggedFeatured.length - 1);
+            console.log(
+              `✅ Loaded ${featuredCards.length} FEATURED cards - Ready to swipe!`
+            );
+          }
         }
+
+        setIsInitialLoading(false);
+
+        // STEP 2: Load ALL remaining cards, then replace the entire array
+        const remainingCategories: ListType[] = [
+          "TOP_GAINERS",
+          "MOST_VALUABLE",
+          "NEW",
+        ];
+
+        const backgroundCards: CardData[] = [];
+
+        for (const category of remainingCategories) {
+          try {
+            console.log(`📥 Background loading ${category} cards...`);
+            const data = await fetchZoraExplore(category);
+
+            if (data && data.exploreList?.edges) {
+              const cards = transformZoraToCards(data);
+
+              if (cards && cards.length > 0) {
+                const taggedCards = cards.map((card) => ({
+                  ...card,
+                  category: category,
+                }));
+
+                backgroundCards.push(...taggedCards);
+                console.log(`✅ Loaded ${cards.length} ${category} cards`);
+              }
+            }
+          } catch (error) {
+            console.error(`Error loading ${category}:`, error);
+          }
+        }
+
+        // Now append all background cards at once (in reverse order for display)
+        if (backgroundCards.length > 0) {
+          const reversedCards = [...backgroundCards].reverse();
+
+          setAllCards((prevCards) => {
+            if (!prevCards || prevCards.length === 0) {
+              return reversedCards;
+            }
+            const newArray = [...reversedCards, ...prevCards];
+            console.log(`📦 Total cards in array: ${newArray.length}`);
+            return newArray;
+          });
+
+          setCurrentIndex((prevIndex) => {
+            const newIndex = prevIndex + reversedCards.length;
+            console.log(`📍 Updated index from ${prevIndex} to ${newIndex}`);
+            return newIndex;
+          });
+        }
+
+        console.log("🎉 All 80 cards loaded!");
+      } catch (error) {
+        console.error("Error loading cards:", error);
+        setIsInitialLoading(false);
       }
-
-      // Now append all background cards at once (in reverse order for display)
-      if (backgroundCards.length > 0) {
-        setAllCards((prevCards) => {
-          // Append in reverse order: [NEW, MOST_VALUABLE, TOP_GAINERS, FEATURED]
-          const newArray = [...backgroundCards.reverse(), ...prevCards];
-          console.log(`📦 Total cards in array: ${newArray.length}`);
-          return newArray;
-        });
-
-        setCurrentIndex((prevIndex) => {
-          const newIndex = prevIndex + backgroundCards.length;
-          console.log(`📍 Updated index from ${prevIndex} to ${newIndex}`);
-          return newIndex;
-        });
-      }
-
-      console.log("🎉 All 80 cards loaded!");
     };
 
     loadCards();
@@ -599,24 +615,28 @@ export default function Demo() {
                 />
 
                 {/* Category Display */}
-                {currentIndex >= 0 && allCards[currentIndex] && (
-                  <div className="mt-4 text-center">
-                    <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg">
-                      <p className="text-xs font-semibold text-white">
-                        {allCards[currentIndex].category}
-                        <span className="ml-2 opacity-75">
-                          ({currentIndex + 1}/{allCards.length})
-                        </span>
-                      </p>
+                {currentIndex >= 0 &&
+                  allCards &&
+                  allCards.length > 0 &&
+                  currentIndex < allCards.length &&
+                  allCards[currentIndex] && (
+                    <div className="mt-4 text-center">
+                      <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg">
+                        <p className="text-xs font-semibold text-white">
+                          {allCards[currentIndex]?.category || "Loading..."}
+                          <span className="ml-2 opacity-75">
+                            ({currentIndex + 1}/{allCards.length})
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
             {/* All Done Popup */}
             {showAllDoneMessage && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
                 <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-scale-in">
                   <div className="mb-6">
                     <div className="text-6xl mb-4">🎉</div>

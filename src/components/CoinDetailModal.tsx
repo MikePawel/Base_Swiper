@@ -94,7 +94,7 @@ const CoinDetailModal: React.FC<CoinDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       {/* Backdrop */}
@@ -154,17 +154,19 @@ const CoinDetailModal: React.FC<CoinDetailModalProps> = ({
           <div className="px-6 py-6 space-y-6">
             {/* Title & Symbol */}
             <div>
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-gray-900">
+              <div className="flex items-start gap-4">
+                <h2 className="text-3xl font-bold text-gray-900 leading-tight flex-1 min-w-0">
                   {card.name}
                 </h2>
                 {card.coinData?.symbol && (
-                  <span className="text-lg font-semibold text-gray-500">
+                  <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md flex-shrink-0 self-start">
                     ${card.coinData.symbol}
                   </span>
                 )}
               </div>
-              <p className="text-gray-600 mt-2">{card.description}</p>
+              <p className="text-gray-600 text-sm mt-3 leading-relaxed break-words whitespace-pre-line">
+                {card.description}
+              </p>
             </div>
 
             {/* Market Stats Grid */}
