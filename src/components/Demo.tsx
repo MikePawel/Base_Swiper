@@ -40,7 +40,7 @@ export default function Demo() {
   const { isConnected, address } = account;
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  
+
   const [activeTab, setActiveTab] = useState<TabType>("swipe");
   const [currentWalletPage, setCurrentWalletPage] =
     useState<WalletPageType>("list");
@@ -79,10 +79,10 @@ export default function Demo() {
 
     try {
       console.log("🛒 Initiating purchase for:", card.name);
-      
+
       // USDC address on Base
       const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-      
+
       const tradeParameters: TradeParameters = {
         sell: {
           type: "erc20",
@@ -107,17 +107,16 @@ export default function Demo() {
       });
 
       console.log("✅ Purchase successful! Receipt:", receipt);
-      
+
       // Add to buy list after successful purchase
       setBuyList((prev) => [...prev, card]);
-      
+
       // Show success feedback
       try {
         await sdk.haptics.notificationOccurred("success");
       } catch {
         console.log("Haptics not supported");
       }
-      
     } catch (error) {
       console.error("❌ Error purchasing token:", error);
       try {
@@ -125,7 +124,7 @@ export default function Demo() {
       } catch {
         console.log("Haptics not supported");
       }
-      
+
       // Still add to buy list even if purchase fails (for demo purposes)
       setBuyList((prev) => [...prev, card]);
     }
