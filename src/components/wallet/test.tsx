@@ -1,7 +1,13 @@
 import { CardData } from "~/data/dummyCards";
 import type { Address } from "viem";
 
-export type ListType = "NEW" | "MOST_VALUABLE" | "TOP_GAINERS" | "FEATURED";
+export type ListType =
+  | "NEW"
+  | "MOST_VALUABLE"
+  | "TOP_GAINERS"
+  | "FEATURED"
+  | "TOP_VOLUME"
+  | "LAST_TRADED";
 
 /**
  * Truncate text to a maximum length and add ellipsis

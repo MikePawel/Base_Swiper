@@ -41,26 +41,14 @@ export default function Demo() {
     useState<WalletPageType>("list");
   const [capabilities, setCapabilities] = useState<any>(null);
   const [buyList, setBuyList] = useState<CardData[]>([]);
-  const [newCards, setNewCards] = useState<CardData[]>([]);
-  const [valuableCards, setValuableCards] = useState<CardData[]>([]);
-  const [gainersCards, setGainersCards] = useState<CardData[]>([]);
-  const [featuredCards, setFeaturedCards] = useState<CardData[]>([]);
-  const [listType, setListType] = useState<ListType>("FEATURED");
+  const [allCards, setAllCards] = useState<CardData[]>([]); // Unified card deck
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
 
-  // Track swipe progress for each filter
-  const [swipeProgress, setSwipeProgress] = useState<{
-    NEW: number;
-    MOST_VALUABLE: number;
-    TOP_GAINERS: number;
-    FEATURED: number;
-  }>({
-    NEW: -1,
-    MOST_VALUABLE: -1,
-    TOP_GAINERS: -1,
-    FEATURED: -1,
-  });
+  // Track loading sequence: Featured -> Gainers -> Valuable -> Volume -> Last Traded -> NEW
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
 
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
@@ -84,45 +72,108 @@ export default function Demo() {
     getCapabilities();
   }, []);
 
-  // Fetch all Zora data on mount
+  // Load initial batch of 20 Featured cards
   useEffect(() => {
-    const getAllZoraData = async () => {
+    const loadInitialCards = async () => {
       setIsInitialLoading(true);
 
-      // Fetch all four types in parallel
-      const [newData, valuableData, gainersData, featuredData] =
-        await Promise.all([
-          fetchZoraExplore("NEW"),
-          fetchZoraExplore("MOST_VALUABLE"),
-          fetchZoraExplore("TOP_GAINERS"),
-          fetchZoraExplore("FEATURED"),
-        ]);
-
-      if (newData) {
-        const cards = transformZoraToCards(newData);
-        setNewCards(cards);
-      }
-
-      if (valuableData) {
-        const cards = transformZoraToCards(valuableData);
-        setValuableCards(cards);
-      }
-
-      if (gainersData) {
-        const cards = transformZoraToCards(gainersData);
-        setGainersCards(cards);
-      }
+      console.log("Loading 20 FEATURED cards...");
+      const featuredData = await fetchZoraExplore("FEATURED");
 
       if (featuredData) {
         const cards = transformZoraToCards(featuredData);
-        setFeaturedCards(cards);
+        setAllCards(cards);
+        setCurrentIndex(cards.length - 1);
+        setLoadingStep(1);
+        console.log(`Loaded ${cards.length} FEATURED cards`);
       }
 
       setIsInitialLoading(false);
     };
 
-    getAllZoraData();
+    loadInitialCards();
   }, []);
+
+  // Progressive loading based on sequence
+  useEffect(() => {
+    const loadNextBatch = async () => {
+      if (isLoadingBatch || isInitialLoading) return;
+
+      const remainingCards = currentIndex + 1;
+
+      // Start loading next batch when ~5 cards remaining
+      if (remainingCards <= 5 && remainingCards > 0) {
+        setIsLoadingBatch(true);
+
+        try {
+          let newCards: CardData[] = [];
+          let listType: ListType = "NEW";
+
+          switch (loadingStep) {
+            case 1:
+              listType = "TOP_GAINERS";
+              console.log("Loading 20 TOP_GAINERS...");
+              break;
+
+            case 2:
+              listType = "MOST_VALUABLE";
+              console.log("Loading 20 MOST_VALUABLE...");
+              break;
+
+            case 3:
+              listType = "TOP_VOLUME";
+              console.log("Loading 20 TOP_VOLUME...");
+              break;
+
+            case 4:
+              listType = "LAST_TRADED";
+              console.log("Loading 20 LAST_TRADED...");
+              break;
+
+            case 5:
+              listType = "NEW";
+              console.log("Loading 20 NEW cards...");
+              // Stay at step 5 to keep loading NEW cards
+              break;
+
+            default:
+              return;
+          }
+
+          const data = await fetchZoraExplore(listType);
+          if (data) {
+            newCards = transformZoraToCards(data);
+          }
+
+          if (newCards.length > 0) {
+            setAllCards((prev) => [...prev, ...newCards]);
+            console.log(
+              `Added ${newCards.length} ${listType} cards. Total: ${
+                allCards.length + newCards.length
+              }`
+            );
+          }
+
+          // Only increment step if not at final step
+          if (loadingStep < 5) {
+            setLoadingStep(loadingStep + 1);
+          }
+        } catch (error) {
+          console.error("Error loading next batch:", error);
+        } finally {
+          setIsLoadingBatch(false);
+        }
+      }
+    };
+
+    loadNextBatch();
+  }, [
+    currentIndex,
+    loadingStep,
+    isLoadingBatch,
+    isInitialLoading,
+    allCards.length,
+  ]);
 
   // Close tab menu when clicking outside
   useEffect(() => {
@@ -199,58 +250,10 @@ export default function Demo() {
     setCurrentWalletPage("list");
   };
 
-  const handleListTypeChange = async (newListType: ListType) => {
-    // Add haptic feedback for list type change
-    try {
-      await sdk.haptics.selectionChanged();
-    } catch (error) {
-      console.log("Haptics not supported:", error);
-    }
-
-    setListType(newListType);
+  // Update current index as user swipes
+  const handleSwipeProgress = (index: number) => {
+    setCurrentIndex(index);
   };
-
-  // Get the current cards based on selected filter
-  const getCurrentCards = (): CardData[] => {
-    switch (listType) {
-      case "NEW":
-        return newCards;
-      case "MOST_VALUABLE":
-        return valuableCards;
-      case "TOP_GAINERS":
-        return gainersCards;
-      case "FEATURED":
-        return featuredCards;
-      default:
-        return featuredCards;
-    }
-  };
-
-  // Update swipe progress when cards are swiped
-  const handleSwipeProgress = (currentIndex: number) => {
-    setSwipeProgress((prev) => ({
-      ...prev,
-      [listType]: currentIndex,
-    }));
-  };
-
-  // Initialize swipe progress when data loads
-  useEffect(() => {
-    if (!isInitialLoading) {
-      setSwipeProgress({
-        NEW: newCards.length - 1,
-        MOST_VALUABLE: valuableCards.length - 1,
-        TOP_GAINERS: gainersCards.length - 1,
-        FEATURED: featuredCards.length - 1,
-      });
-    }
-  }, [
-    isInitialLoading,
-    newCards.length,
-    valuableCards.length,
-    gainersCards.length,
-    featuredCards.length,
-  ]);
 
   return (
     <div
@@ -385,42 +388,6 @@ export default function Demo() {
               <p className="text-sm text-muted-foreground mb-4">
                 Swipe right to buy, left to pass • Live from Zora
               </p>
-
-              {/* List Type Toggle */}
-              {!isInitialLoading && (
-                <div className="flex gap-2 p-1 bg-white border border-border rounded-lg">
-                  <button
-                    onClick={() => handleListTypeChange("FEATURED")}
-                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                      listType === "FEATURED"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background"
-                    }`}
-                  >
-                    ⭐ Featured
-                  </button>
-                  <button
-                    onClick={() => handleListTypeChange("MOST_VALUABLE")}
-                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                      listType === "MOST_VALUABLE"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background"
-                    }`}
-                  >
-                    💎 Valuable
-                  </button>
-                  <button
-                    onClick={() => handleListTypeChange("TOP_GAINERS")}
-                    className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                      listType === "TOP_GAINERS"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background"
-                    }`}
-                  >
-                    📈 Gainers
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Initial Loading State */}
@@ -429,18 +396,15 @@ export default function Demo() {
                 <div className="text-center">
                   <div className="text-4xl mb-2">⏳</div>
                   <p className="text-sm text-muted-foreground">
-                    Loading tokens...
+                    Loading featured tokens...
                   </p>
                 </div>
               </div>
             ) : (
-              /* Swipe Cards */
+              /* Swipe Cards - Infinite scroll */
               <SwipeCards
-                key={listType}
-                cards={
-                  getCurrentCards().length > 0 ? getCurrentCards() : undefined
-                }
-                initialIndex={swipeProgress[listType]}
+                cards={allCards.length > 0 ? allCards : undefined}
+                initialIndex={currentIndex}
                 onBuy={handleBuy}
                 onPass={handlePass}
                 onIndexChange={handleSwipeProgress}

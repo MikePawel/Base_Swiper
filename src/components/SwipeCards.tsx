@@ -333,17 +333,6 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
         )}
       </div>
 
-      {/* Counter */}
-      <div className="text-center text-sm text-gray-600 mt-8">
-        {currentIndex >= 0 ? (
-          <span>
-            {currentIndex + 1} / {cards.length} items remaining
-          </span>
-        ) : (
-          <span>No more items</span>
-        )}
-      </div>
-
       <style jsx>{`
         /* Swipe indicator animations */
         :global(.swipe-left-indicator),
