@@ -52,6 +52,11 @@ export default function Demo() {
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
   const [hasTriedLoadingNew, setHasTriedLoadingNew] = useState(false);
 
+  // Track which categories have been loaded to prevent duplicates
+  const [loadedCategories, setLoadedCategories] = useState<Set<string>>(
+    new Set()
+  );
+
   const handleBuy = (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
     console.log("Added to buy list:", card);
@@ -79,15 +84,18 @@ export default function Demo() {
     const loadInitialCards = async () => {
       setIsInitialLoading(true);
 
-      console.log("Loading 20 FEATURED cards...");
+      console.log("🎬 STEP 0: Loading 20 FEATURED cards...");
       const featuredData = await fetchZoraExplore("FEATURED");
 
       if (featuredData) {
         const cards = transformZoraToCards(featuredData);
         setAllCards(cards);
         setCurrentIndex(cards.length - 1);
+        setLoadedCategories(new Set(["FEATURED"]));
         setLoadingStep(1);
-        console.log(`Loaded ${cards.length} FEATURED cards`);
+        console.log(
+          `✅ Loaded ${cards.length} FEATURED cards | Total: ${cards.length}`
+        );
       }
 
       setIsInitialLoading(false);
@@ -105,57 +113,71 @@ export default function Demo() {
 
       // Start loading next batch when ~5 cards remaining
       if (remainingCards <= 5 && remainingCards > 0) {
+        let listType: ListType = "NEW";
+        let categoryKey = "";
+
+        // Determine what to load based on loading step
+        switch (loadingStep) {
+          case 1:
+            listType = "TOP_GAINERS";
+            categoryKey = "TOP_GAINERS";
+            break;
+
+          case 2:
+            listType = "MOST_VALUABLE";
+            categoryKey = "MOST_VALUABLE";
+            break;
+
+          case 3:
+            listType = "NEW";
+            categoryKey = "NEW";
+            setHasTriedLoadingNew(true);
+            break;
+
+          default:
+            return;
+        }
+
+        // Check if we've already loaded this category (except NEW which can repeat)
+        if (loadedCategories.has(categoryKey) && categoryKey !== "NEW") {
+          console.log(`⚠️ ${categoryKey} already loaded, skipping...`);
+          // Move to next step
+          if (loadingStep < 3) {
+            setLoadingStep(loadingStep + 1);
+          }
+          return;
+        }
+
         setIsLoadingBatch(true);
 
         try {
-          let newCards: CardData[] = [];
-          let listType: ListType = "NEW";
-
-          switch (loadingStep) {
-            case 1:
-              listType = "TOP_GAINERS";
-              console.log("Loading 20 TOP_GAINERS...");
-              break;
-
-            case 2:
-              listType = "MOST_VALUABLE";
-              console.log("Loading 20 MOST_VALUABLE...");
-              break;
-
-            case 3:
-              listType = "NEW";
-              console.log("Loading 20 NEW cards...");
-              setHasTriedLoadingNew(true);
-              // Stay at step 3 to keep loading NEW cards
-              break;
-
-            default:
-              return;
-          }
-
+          console.log(`📥 STEP ${loadingStep}: Loading ${categoryKey}...`);
           const data = await fetchZoraExplore(listType);
+          let newCards: CardData[] = [];
+
           if (data) {
             newCards = transformZoraToCards(data);
           }
 
           if (newCards.length > 0) {
             setAllCards((prev) => [...prev, ...newCards]);
+            setLoadedCategories((prev) => new Set([...prev, categoryKey]));
             console.log(
-              `Added ${newCards.length} ${listType} cards. Total: ${
+              `✅ Added ${newCards.length} ${categoryKey} cards | Total: ${
                 allCards.length + newCards.length
               }`
             );
+
+            // Only increment step if not at final step (NEW cards)
+            if (loadingStep < 3) {
+              setLoadingStep(loadingStep + 1);
+            }
           } else if (loadingStep === 3) {
             // No more NEW cards available
-            console.log("No more NEW cards available");
-          }
-
-          // Only increment step if not at final step (NEW cards)
-          if (loadingStep < 3) {
-            setLoadingStep(loadingStep + 1);
+            console.log("❌ No more NEW cards available");
           }
         } catch (error) {
-          console.error("Error loading next batch:", error);
+          console.error(`❌ Error loading ${categoryKey}:`, error);
         } finally {
           setIsLoadingBatch(false);
         }
@@ -169,6 +191,7 @@ export default function Demo() {
     isLoadingBatch,
     isInitialLoading,
     allCards.length,
+    loadedCategories,
   ]);
 
   // Close tab menu when clicking outside
