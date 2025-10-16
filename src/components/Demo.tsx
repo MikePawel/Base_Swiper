@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useFrameContext } from "~/components/providers/FrameProvider";
 import { sdk } from "@farcaster/miniapp-sdk";
-import { useAccount, useWalletClient, usePublicClient } from "wagmi";
+import { useAccount } from "wagmi";
 import {
   WalletConnect,
   SignMessage,
@@ -22,7 +22,6 @@ import {
   transformZoraToCards,
   ListType,
 } from "~/components/wallet/test";
-import { tradeCoin, TradeParameters } from "@zoralabs/coins-sdk";
 
 type TabType = "swipe" | "buylist" | "wallet";
 type WalletPageType = "list" | "basepay" | "wallet";
@@ -36,11 +35,7 @@ interface WalletActionDefinition {
 
 export default function Demo() {
   const frameContext = useFrameContext();
-  const account = useAccount();
-  const { isConnected, address } = account;
-  const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
-
+  const { isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState<TabType>("swipe");
   const [currentWalletPage, setCurrentWalletPage] =
     useState<WalletPageType>("list");
@@ -62,72 +57,9 @@ export default function Demo() {
     new Set()
   );
 
-  const handleBuy = async (card: CardData) => {
-    // Check if wallet is connected and we have necessary clients
-    if (!isConnected || !address || !walletClient || !publicClient) {
-      console.error("Wallet not connected or clients not available");
-      setBuyList((prev) => [...prev, card]);
-      return;
-    }
-
-    // Check if card has coin address
-    if (!card.coinData?.address) {
-      console.error("Card does not have a coin address");
-      setBuyList((prev) => [...prev, card]);
-      return;
-    }
-
-    try {
-      console.log("🛒 Initiating purchase for:", card.name);
-
-      // USDC address on Base
-      const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-
-      const tradeParameters: TradeParameters = {
-        sell: {
-          type: "erc20",
-          address: USDC_ADDRESS,
-        },
-        buy: {
-          type: "erc20",
-          address: card.coinData.address as `0x${string}`,
-        },
-        amountIn: BigInt(0.1 * 10 ** 6), // 0.1 USDC (6 decimals)
-        slippage: 0.05, // 5% slippage
-        sender: address,
-      };
-
-      console.log("Trade parameters:", tradeParameters);
-
-      const receipt = await tradeCoin({
-        tradeParameters,
-        walletClient,
-        account: account as any,
-        publicClient,
-      });
-
-      console.log("✅ Purchase successful! Receipt:", receipt);
-
-      // Add to buy list after successful purchase
-      setBuyList((prev) => [...prev, card]);
-
-      // Show success feedback
-      try {
-        await sdk.haptics.notificationOccurred("success");
-      } catch {
-        console.log("Haptics not supported");
-      }
-    } catch (error) {
-      console.error("❌ Error purchasing token:", error);
-      try {
-        await sdk.haptics.notificationOccurred("error");
-      } catch {
-        console.log("Haptics not supported");
-      }
-
-      // Still add to buy list even if purchase fails (for demo purposes)
-      setBuyList((prev) => [...prev, card]);
-    }
+  const handleBuy = (card: CardData) => {
+    setBuyList((prev) => [...prev, card]);
+    console.log("Added to buy list:", card);
   };
 
   const handlePass = (card: CardData) => {
