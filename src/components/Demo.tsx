@@ -46,7 +46,7 @@ export default function Demo() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
 
-  // Track loading sequence: Featured -> Gainers -> Valuable -> Volume -> Last Traded -> NEW
+  // Track loading sequence: Featured -> Gainers -> Valuable -> Volume -> NEW
   const [loadingStep, setLoadingStep] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
 
@@ -126,14 +126,9 @@ export default function Demo() {
               break;
 
             case 4:
-              listType = "LAST_TRADED";
-              console.log("Loading 20 LAST_TRADED...");
-              break;
-
-            case 5:
               listType = "NEW";
               console.log("Loading 20 NEW cards...");
-              // Stay at step 5 to keep loading NEW cards
+              // Stay at step 4 to keep loading NEW cards
               break;
 
             default:
@@ -154,8 +149,8 @@ export default function Demo() {
             );
           }
 
-          // Only increment step if not at final step
-          if (loadingStep < 5) {
+          // Only increment step if not at final step (NEW cards)
+          if (loadingStep < 4) {
             setLoadingStep(loadingStep + 1);
           }
         } catch (error) {
@@ -382,9 +377,6 @@ export default function Demo() {
         {activeTab === "swipe" && (
           <div>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Discover & Buy
-              </h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Swipe right to buy, left to pass • Live from Zora
               </p>

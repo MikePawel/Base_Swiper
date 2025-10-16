@@ -6,8 +6,7 @@ export type ListType =
   | "MOST_VALUABLE"
   | "TOP_GAINERS"
   | "FEATURED"
-  | "TOP_VOLUME"
-  | "LAST_TRADED";
+  | "TOP_VOLUME";
 
 /**
  * Truncate text to a maximum length and add ellipsis
