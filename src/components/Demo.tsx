@@ -4,17 +4,15 @@
 import React, { useState, useEffect } from "react";
 import { useFrameContext } from "~/components/providers/FrameProvider";
 import { sdk } from "@farcaster/miniapp-sdk";
-import { useAccount } from "wagmi";
 import {
-  WalletConnect,
-  SignMessage,
-  SignSiweMessage,
-  SendEth,
-  SignTypedData,
-  SwitchChain,
-  SendTransaction,
-} from "~/components/wallet/WalletActions";
-import { BasePay } from "~/components/wallet/BasePay";
+  useAccount,
+  useReadContract,
+  useWalletClient,
+  usePublicClient,
+  useBalance,
+} from "wagmi";
+import { useWeb3Auth } from "@web3auth/modal/react";
+import { WalletConnect } from "~/components/wallet/WalletActions";
 import SwipeCards from "~/components/SwipeCards";
 import { CardData } from "~/data/dummyCards";
 import {
@@ -22,6 +20,15 @@ import {
   transformZoraToCards,
   ListType,
 } from "~/components/wallet/test";
+import {
+  USDC_CONTRACT,
+  ERC20_ABI,
+  checkSufficientBalance,
+  formatUSDCBalance,
+} from "~/lib/swapTokens";
+import { tradeCoin, type TradeParameters } from "@zoralabs/coins-sdk";
+import { createWalletClient, custom } from "viem";
+import { base } from "viem/chains";
 
 type TabType = "swipe" | "buylist" | "wallet";
 type WalletPageType = "list" | "basepay" | "wallet";
@@ -35,7 +42,9 @@ interface WalletActionDefinition {
 
 export default function Demo() {
   const frameContext = useFrameContext();
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
+  const { status, provider } = useWeb3Auth();
+  const isWeb3AuthConnected = status === "connected";
   const [activeTab, setActiveTab] = useState<TabType>("swipe");
   const [currentWalletPage, setCurrentWalletPage] =
     useState<WalletPageType>("list");
@@ -45,6 +54,7 @@ export default function Demo() {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
+  const [web3AuthAddress, setWeb3AuthAddress] = useState<string | null>(null);
 
   // Track loading sequence: FEATURED -> MOST_VALUABLE -> TOP_GAINERS -> NEW (4 STEPS!)
   const [loadingStep, setLoadingStep] = useState(0);
@@ -57,9 +67,168 @@ export default function Demo() {
     new Set()
   );
 
-  const handleBuy = (card: CardData) => {
+  const { data: wagmiWalletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const [customWalletClient, setCustomWalletClient] = useState<any>(null);
+
+  // Get Web3Auth wallet address and create wallet client
+  useEffect(() => {
+    const getAddress = async () => {
+      if (isWeb3AuthConnected && provider) {
+        try {
+          const accounts = await provider.request({ method: "eth_accounts" });
+          if (accounts && Array.isArray(accounts) && accounts.length > 0) {
+            const accountAddress = accounts[0] as `0x${string}`;
+            setWeb3AuthAddress(accountAddress);
+
+            // Create wallet client from Web3Auth provider
+            const walletClient = createWalletClient({
+              account: accountAddress,
+              chain: base,
+              transport: custom(provider),
+            });
+            setCustomWalletClient(walletClient);
+          }
+        } catch (error) {
+          console.error("Failed to get address:", error);
+        }
+      } else {
+        setWeb3AuthAddress(null);
+        setCustomWalletClient(null);
+      }
+    };
+    getAddress();
+  }, [isWeb3AuthConnected, provider]);
+
+  // Use Web3Auth address if available, otherwise fallback
+  const userAddress = (web3AuthAddress || address) as `0x${string}` | undefined;
+
+  // Fetch USDC balance
+  const { data: usdcBalanceData } = useReadContract({
+    address: USDC_CONTRACT,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: userAddress ? [userAddress] : undefined,
+    chainId: 8453, // Base Mainnet
+  });
+
+  const usdcBalance = usdcBalanceData as bigint | undefined;
+
+  // Fetch ETH balance for gas fees
+  const { data: ethBalance } = useBalance({
+    address: userAddress,
+    chainId: 8453,
+  });
+
+  const handleBuy = async (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
     console.log("Added to buy list:", card);
+
+    // Check if Web3Auth is connected and has sufficient USDC
+    if (!isWeb3AuthConnected || !userAddress) {
+      console.log("⚠️ Wallet not connected");
+      alert("Please connect your Web3Auth wallet first!");
+      return;
+    }
+
+    // Check if user has enough ETH for gas (need at least 0.0002 ETH for safe margin)
+    const minEthForGas = 200000000000000n; // 0.0002 ETH in wei
+    if (!ethBalance || ethBalance.value < minEthForGas) {
+      const currentEth = ethBalance
+        ? (Number(ethBalance.value) / 1e18).toFixed(6)
+        : "0";
+      console.log(
+        `⚠️ Insufficient ETH for gas. Have: ${currentEth} ETH, Need: ~0.0002 ETH`
+      );
+      alert(
+        `⚠️ Insufficient ETH for Gas Fees!\n\n` +
+          `You have: ${currentEth} ETH\n` +
+          `You need: ~0.0002 ETH (minimum)\n\n` +
+          `Please add some ETH to your wallet on Base chain.\n` +
+          `Your address: ${userAddress}`
+      );
+      return;
+    }
+
+    if (!checkSufficientBalance(usdcBalance, "0.1")) {
+      console.log(
+        `⚠️ Insufficient USDC balance. Have: ${formatUSDCBalance(
+          usdcBalance
+        )} USDC, Need: 0.1 USDC`
+      );
+      alert(
+        `⚠️ Insufficient USDC!\n\nYou have: ${formatUSDCBalance(
+          usdcBalance
+        )} USDC\nYou need: 0.1 USDC`
+      );
+      return;
+    }
+
+    if (!card.coinData?.address) {
+      console.log("⚠️ Token address not available");
+      return;
+    }
+
+    // Use custom wallet client for Web3Auth, otherwise use wagmi wallet client
+    const activeWalletClient = customWalletClient || wagmiWalletClient;
+
+    // Check if we have the necessary clients
+    if (!activeWalletClient || !publicClient) {
+      console.log("⚠️ Wallet client or public client not available");
+      console.log("Custom wallet client:", customWalletClient);
+      console.log("Wagmi wallet client:", wagmiWalletClient);
+      console.log("Public client:", publicClient);
+      return;
+    }
+
+    try {
+      console.log(`🔄 Starting purchase: 0.1 USDC → ${card.name}`);
+      console.log("Using wallet client:", activeWalletClient);
+
+      // Set up trade parameters using Zora Coins SDK
+      const tradeParameters: TradeParameters = {
+        sell: {
+          type: "erc20",
+          address: USDC_CONTRACT, // USDC address on Base
+        },
+        buy: {
+          type: "erc20",
+          address: card.coinData.address as `0x${string}`, // Creator Coin address
+        },
+        amountIn: BigInt(0.1 * 10 ** 6), // 0.1 USDC (6 decimals)
+        slippage: 0.05, // 5% slippage
+        sender: userAddress,
+      };
+
+      console.log("💱 Executing trade via Zora Coins SDK...");
+
+      // Execute the trade using Zora Coins SDK
+      const receipt = await tradeCoin({
+        tradeParameters,
+        walletClient: activeWalletClient,
+        account: userAddress,
+        publicClient,
+      });
+
+      console.log(`✅ Successfully purchased ${card.name}!`);
+      console.log("Transaction receipt:", receipt);
+
+      // Trigger haptic feedback for success
+      try {
+        await sdk.haptics.notificationOccurred("success");
+      } catch (error) {
+        console.log("Haptics not supported:", error);
+      }
+    } catch (error) {
+      console.error("❌ Purchase failed:", error);
+
+      // Trigger haptic feedback for error
+      try {
+        await sdk.haptics.notificationOccurred("error");
+      } catch (err) {
+        console.log("Haptics not supported:", err);
+      }
+    }
   };
 
   const handlePass = (card: CardData) => {
@@ -237,31 +406,7 @@ export default function Demo() {
     isLoadingBatch,
   ]);
 
-  const WalletActionsComponent = () => (
-    <div className="space-y-4">
-      <SignMessage />
-      <SignSiweMessage />
-      <SendEth />
-      <SendTransaction />
-      <SignTypedData />
-      <SwitchChain />
-    </div>
-  );
-
-  const walletActionDefinitions: WalletActionDefinition[] = [
-    {
-      id: "basepay",
-      name: "Base Pay",
-      description: "Debug Base Pay",
-      component: BasePay,
-    },
-    {
-      id: "wallet",
-      name: "Wallet",
-      description: "Debug wallet interactions",
-      component: WalletActionsComponent,
-    },
-  ];
+  const walletActionDefinitions: WalletActionDefinition[] = [];
 
   const handleTabChange = async (tab: TabType) => {
     if (capabilities?.includes("haptics.selectionChanged")) {
@@ -639,16 +784,8 @@ export default function Demo() {
 
         {activeTab === "wallet" && (
           <div className="space-y-4">
-            {!isConnected ? (
-              <div className="text-center py-8">
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Connect Your Wallet
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    Connect your wallet to access all features
-                  </p>
-                </div>
+            {!isConnected && !isWeb3AuthConnected ? (
+              <div className="py-8">
                 <WalletConnect />
               </div>
             ) : (

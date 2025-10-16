@@ -1,26 +1,30 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import {
   useAccount,
   useSendTransaction,
   useSignMessage,
   useSignTypedData,
   useWaitForTransactionReceipt,
-  useDisconnect,
-  useConnect,
   useSwitchChain,
   useChainId,
+  useBalance,
+  useReadContract,
+  useConnect,
 } from "wagmi";
 import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
 import { base, optimism } from "wagmi/chains";
-import { BaseError, UserRejectedRequestError } from "viem";
+import { BaseError, UserRejectedRequestError, formatUnits } from "viem";
 
-import { SignInWithBaseButton } from "@base-org/account-ui/react";
-import { createBaseAccountSDK } from "@base-org/account";
-import { METADATA } from "~/lib/utils";
+import {
+  useWeb3Auth,
+  useWeb3AuthConnect,
+  useWeb3AuthDisconnect,
+  useWeb3AuthUser,
+} from "@web3auth/modal/react";
 import { SiweMessage } from "siwe";
 import { setApiKey } from "@zoralabs/coins-sdk";
 
@@ -32,10 +36,19 @@ if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
 // dylsteck.base.eth
 const RECIPIENT_ADDRESS = "0x8342A48694A74044116F330db5050a267b28dD85";
 
-const baseAccountSDK = createBaseAccountSDK({
-  appName: METADATA.name,
-  appLogoUrl: METADATA.iconImageUrl,
-});
+// USDC contract on Base Mainnet
+const USDC_CONTRACT = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+// ERC20 ABI for balanceOf
+const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [{ name: "_owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "balance", type: "uint256" }],
+    type: "function",
+  },
+] as const;
 
 const renderError = (error: Error | null): React.ReactElement | null => {
   if (!error) return null;
@@ -53,64 +66,274 @@ const renderError = (error: Error | null): React.ReactElement | null => {
 };
 
 export function WalletConnect() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { address, chain } = useAccount();
   const chainId = useChainId();
-  const { connect } = useConnect();
-  const [baseSignedIn, setBaseSignedIn] = useState(false);
+  const { web3Auth, status, provider } = useWeb3Auth();
+  const { connect: web3AuthConnect, loading: isConnecting } =
+    useWeb3AuthConnect();
+  const { disconnect: web3AuthDisconnect } = useWeb3AuthDisconnect();
+  const [web3AuthAddress, setWeb3AuthAddress] = useState<string | null>(null);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [privateKey, setPrivateKey] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
-  const handleBaseSignIn = async () => {
-    try {
-      await baseAccountSDK.getProvider().request({ method: "wallet_connect" });
-      setBaseSignedIn(true);
-    } catch (error) {
-      console.error("Base sign in failed:", error);
+  const isWeb3AuthConnected = status === "connected";
+
+  // Get Web3Auth wallet address
+  React.useEffect(() => {
+    const getWeb3AuthAddress = async () => {
+      if (isWeb3AuthConnected && provider) {
+        try {
+          const accounts = await provider.request({ method: "eth_accounts" });
+          if (accounts && Array.isArray(accounts) && accounts.length > 0) {
+            setWeb3AuthAddress(accounts[0] as string);
+          }
+        } catch (error) {
+          console.error("Failed to get Web3Auth address:", error);
+        }
+      } else {
+        setWeb3AuthAddress(null);
+        setPrivateKey(null);
+        setShowPrivateKey(false);
+      }
+    };
+    getWeb3AuthAddress();
+  }, [isWeb3AuthConnected, provider]);
+
+  // Get private key when requested
+  const handleShowPrivateKey = async () => {
+    if (!showPrivateKey && provider && web3Auth) {
+      try {
+        // Web3Auth uses "private_key" method, not "eth_private_key"
+        const privateKey = await provider.request({
+          method: "private_key",
+        });
+        setPrivateKey(privateKey as string);
+        setShowPrivateKey(true);
+      } catch (error) {
+        console.error("Failed to get private key:", error);
+        alert("Failed to retrieve private key. Please try again.");
+      }
+    } else {
+      setShowPrivateKey(!showPrivateKey);
     }
   };
 
+  // Copy to clipboard
+  const handleCopyPrivateKey = async () => {
+    if (privateKey) {
+      try {
+        await navigator.clipboard.writeText(privateKey);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy:", error);
+      }
+    }
+  };
+
+  // Use Web3Auth address if available, otherwise use wagmi address
+  const displayAddress = (web3AuthAddress || address) as
+    | `0x${string}`
+    | undefined;
+
+  // Fetch ETH balance
+  const { data: ethBalance } = useBalance({
+    address: displayAddress,
+    chainId: chainId,
+  });
+
+  // Fetch USDC balance
+  const { data: usdcBalance } = useReadContract({
+    address: USDC_CONTRACT,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: displayAddress ? [displayAddress] : undefined,
+    chainId: chainId,
+  });
+
+  const handleWeb3AuthConnect = async () => {
+    try {
+      await web3AuthConnect();
+    } catch (error) {
+      console.error("Web3Auth connection failed:", error);
+    }
+  };
+
+  const handleWeb3AuthDisconnect = async () => {
+    try {
+      await web3AuthDisconnect();
+    } catch (error) {
+      console.error("Web3Auth disconnect failed:", error);
+    }
+  };
+
+  // Format USDC balance (6 decimals)
+  const formattedUsdcBalance = usdcBalance
+    ? formatUnits(usdcBalance as bigint, 6)
+    : "0";
+
+  // Format ETH balance
+  const formattedEthBalance = ethBalance
+    ? parseFloat(ethBalance.formatted).toFixed(4)
+    : "0";
+
   return (
     <>
-      <div className="mb-4">
-        <Button
-          onClick={() =>
-            isConnected
-              ? disconnect()
-              : connect({ connector: config.connectors[0] })
-          }
-          className="w-full"
-        >
-          {isConnected ? "Disconnect" : "Connect"}
-        </Button>
-      </div>
-
-      {/* Base Account Sign In Button */}
-      <div className="mb-4">
-        <SignInWithBaseButton
-          align="center"
-          variant="solid"
-          colorScheme="light"
-          onClick={handleBaseSignIn}
-        />
-        {baseSignedIn && (
-          <div className="mt-2 text-center text-sm text-green-600">
-            ✅ Connected to Base Account
+      {/* Show connection options only when NOT connected */}
+      {!isWeb3AuthConnected && (
+        <div className="space-y-3">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">
+              Connect Wallet
+            </h2>
+            <p className="text-sm text-gray-500">Connect to get started</p>
           </div>
-        )}
-      </div>
 
-      {isConnected && address && chainId && (
-        <div className="mt-4 p-4 bg-white border border-border rounded-xl">
-          <div className="flex justify-between items-center text-sm">
-            <div>
-              <span className="text-muted-foreground">Address:</span>
-              <div className="font-mono text-foreground mt-1">
-                {truncateAddress(address)}
+          <Button
+            onClick={handleWeb3AuthConnect}
+            disabled={isConnecting}
+            isLoading={isConnecting}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-base font-medium"
+          >
+            {isConnecting ? "Connecting..." : "Connect Wallet"}
+          </Button>
+        </div>
+      )}
+
+      {/* Web3Auth Wallet Info Display - Only shown when connected */}
+      {isWeb3AuthConnected && displayAddress && (
+        <div className="space-y-4">
+          {/* Disconnect Button at Top */}
+          <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium text-gray-700">
+                Connected
+              </span>
+            </div>
+            <Button
+              onClick={handleWeb3AuthDisconnect}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2"
+            >
+              Disconnect
+            </Button>
+          </div>
+
+          {/* Wallet Card */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+            {/* Chain Badge */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Network
+              </span>
+              <div className="px-3 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                {chain?.name || "Base"}
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-muted-foreground">Chain:</span>
-              <div className="font-mono text-foreground mt-1">{chainId}</div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Address
+              </span>
+              <div className="font-mono text-xs text-gray-700 bg-gray-50 px-3 py-2 rounded border border-gray-200 break-all">
+                {displayAddress}
+              </div>
+              <a
+                href={`https://basescan.org/address/${displayAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 gap-1"
+              >
+                View on BaseScan
+                <span>→</span>
+              </a>
             </div>
+
+            {/* Balances */}
+            <div className="space-y-3 pt-4 border-t border-gray-200">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Balances
+              </span>
+
+              {/* ETH Balance */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                    Ξ
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">ETH</div>
+                    <div className="text-xs text-gray-500">Ethereum</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-lg font-semibold text-gray-900">
+                    {formattedEthBalance}
+                  </div>
+                </div>
+              </div>
+
+              {/* USDC Balance */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                    $
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      USDC
+                    </div>
+                    <div className="text-xs text-gray-500">USD Coin</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-lg font-semibold text-gray-900">
+                    ${parseFloat(formattedUsdcBalance).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Export Private Key Section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Export Wallet
+              </span>
+              <span className="text-xs text-gray-400">Advanced</span>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Export your private key to use this wallet in other apps. Keep it
+              secure.
+            </p>
+
+            <Button
+              onClick={handleShowPrivateKey}
+              className="w-full bg-gray-900 hover:bg-black text-white text-sm py-2.5"
+            >
+              {showPrivateKey ? "Hide Private Key" : "Show Private Key"}
+            </Button>
+
+            {showPrivateKey && privateKey && (
+              <div className="space-y-3 pt-2 border-t border-gray-200">
+                <div className="bg-gray-900 rounded-lg p-4">
+                  <div className="font-mono text-xs text-gray-300 break-all leading-relaxed">
+                    {privateKey}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleCopyPrivateKey}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm py-2"
+                >
+                  {copySuccess ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
