@@ -386,7 +386,6 @@ const CoinDetailModal: React.FC<CoinDetailModalProps> = ({
               <button
                 onClick={() => {
                   onSkip?.();
-                  onClose();
                 }}
                 className="flex-1 py-4 px-6 bg-white rounded-2xl font-semibold text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md active:scale-98"
               >
@@ -397,7 +396,6 @@ const CoinDetailModal: React.FC<CoinDetailModalProps> = ({
               <button
                 onClick={() => {
                   onBuy?.();
-                  onClose();
                 }}
                 className="flex-1 py-4 px-6 bg-gray-900 rounded-2xl font-semibold text-white hover:bg-gray-800 transition-all shadow-md hover:shadow-lg active:scale-98"
               >

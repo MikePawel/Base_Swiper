@@ -348,10 +348,28 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onBuy={() => {
-            onBuy?.(selectedCard);
+            // Close modal immediately
+            setIsModalOpen(false);
+            // Clear selected card
+            setSelectedCard(null);
+            // Trigger right swipe programmatically
+            setTimeout(() => {
+              if (currentIndex >= 0 && childRefs[currentIndex]?.current) {
+                childRefs[currentIndex].current.swipe("right");
+              }
+            }, 50);
           }}
           onSkip={() => {
-            onPass?.(selectedCard);
+            // Close modal immediately
+            setIsModalOpen(false);
+            // Clear selected card
+            setSelectedCard(null);
+            // Trigger left swipe programmatically
+            setTimeout(() => {
+              if (currentIndex >= 0 && childRefs[currentIndex]?.current) {
+                childRefs[currentIndex].current.swipe("left");
+              }
+            }, 50);
           }}
         />
       )}

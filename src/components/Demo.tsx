@@ -56,16 +56,8 @@ export default function Demo() {
   const [showTabMenu, setShowTabMenu] = useState(false);
   const [web3AuthAddress, setWeb3AuthAddress] = useState<string | null>(null);
 
-  // Track loading sequence: FEATURED -> MOST_VALUABLE -> TOP_GAINERS -> NEW (4 STEPS!)
-  const [loadingStep, setLoadingStep] = useState(0);
-  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
+  // Track when all cards are swiped
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
-  const [hasTriedLoadingNew, setHasTriedLoadingNew] = useState(false);
-
-  // Track which categories have been loaded to prevent duplicates
-  const [loadedCategories, setLoadedCategories] = useState<Set<string>>(
-    new Set()
-  );
 
   const { data: wagmiWalletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -248,121 +240,83 @@ export default function Demo() {
     getCapabilities();
   }, []);
 
-  // Load initial batch of 20 Featured cards
+  // Load first 20 cards (FEATURED) immediately, then load rest in background
+  // Cards are displayed from END to START, so we build array in reverse: [NEW, MOST_VALUABLE, TOP_GAINERS, FEATURED]
   useEffect(() => {
-    const loadInitialCards = async () => {
+    const loadCards = async () => {
       setIsInitialLoading(true);
 
-      console.log("🎬 STEP 0: Loading 20 FEATURED cards...");
+      // STEP 1: Load FEATURED cards first (shows immediately)
+      console.log("🎬 Loading FEATURED cards...");
       const featuredData = await fetchZoraExplore("FEATURED");
 
       if (featuredData) {
-        const cards = transformZoraToCards(featuredData);
-        setAllCards(cards);
-        setCurrentIndex(cards.length - 1);
-        setLoadedCategories(new Set(["FEATURED"]));
-        setLoadingStep(1);
+        const featuredCards = transformZoraToCards(featuredData);
+        const taggedFeatured = featuredCards.map((card) => ({
+          ...card,
+          category: "FEATURED" as ListType,
+        }));
+
+        // For now, just show FEATURED cards
+        setAllCards(taggedFeatured);
+        setCurrentIndex(taggedFeatured.length - 1);
         console.log(
-          `✅ Loaded ${cards.length} FEATURED cards | Total: ${cards.length}`
+          `✅ Loaded ${featuredCards.length} FEATURED cards - Ready to swipe!`
         );
       }
 
       setIsInitialLoading(false);
-    };
 
-    loadInitialCards();
-  }, []);
+      // STEP 2: Load ALL remaining cards, then replace the entire array
+      const remainingCategories: ListType[] = [
+        "TOP_GAINERS",
+        "MOST_VALUABLE",
+        "NEW",
+      ];
 
-  // Progressive loading based on sequence
-  useEffect(() => {
-    const loadNextBatch = async () => {
-      if (isLoadingBatch || isInitialLoading) return;
+      const backgroundCards: CardData[] = [];
 
-      const remainingCards = currentIndex + 1;
+      for (let i = 0; i < remainingCategories.length; i++) {
+        const category = remainingCategories[i]!;
+        console.log(`📥 Background loading ${category} cards...`);
 
-      // Start loading next batch when ~5 cards remaining
-      if (remainingCards <= 5 && remainingCards > 0) {
-        let listType: ListType = "NEW";
-        let categoryKey = "";
+        const data = await fetchZoraExplore(category);
 
-        // Determine what to load based on loading step
-        // EXACT ORDER: FEATURED (step 0) -> MOST_VALUABLE (step 1) -> TOP_GAINERS (step 2) -> NEW (step 3)
-        switch (loadingStep) {
-          case 1:
-            listType = "MOST_VALUABLE";
-            categoryKey = "MOST_VALUABLE";
-            break;
+        if (data) {
+          const cards = transformZoraToCards(data);
+          const taggedCards = cards.map((card) => ({
+            ...card,
+            category: category,
+          }));
 
-          case 2:
-            listType = "TOP_GAINERS";
-            categoryKey = "TOP_GAINERS";
-            break;
-
-          case 3:
-            listType = "NEW";
-            categoryKey = "NEW";
-            setHasTriedLoadingNew(true);
-            break;
-
-          default:
-            return;
-        }
-
-        // Check if we've already loaded this category (except NEW which can repeat)
-        if (loadedCategories.has(categoryKey) && categoryKey !== "NEW") {
-          console.log(`⚠️ ${categoryKey} already loaded, skipping...`);
-          // Move to next step
-          if (loadingStep < 3) {
-            setLoadingStep(loadingStep + 1);
-          }
-          return;
-        }
-
-        setIsLoadingBatch(true);
-
-        try {
-          console.log(`📥 STEP ${loadingStep}: Loading ${categoryKey}...`);
-          const data = await fetchZoraExplore(listType);
-          let newCards: CardData[] = [];
-
-          if (data) {
-            newCards = transformZoraToCards(data);
-          }
-
-          if (newCards.length > 0) {
-            setAllCards((prev) => [...prev, ...newCards]);
-            setLoadedCategories((prev) => new Set([...prev, categoryKey]));
-            console.log(
-              `✅ Added ${newCards.length} ${categoryKey} cards | Total: ${
-                allCards.length + newCards.length
-              }`
-            );
-
-            // Only increment step if not at final step (NEW cards)
-            if (loadingStep < 3) {
-              setLoadingStep(loadingStep + 1);
-            }
-          } else if (loadingStep === 3) {
-            // No more NEW cards available
-            console.log("❌ No more NEW cards available");
-          }
-        } catch (error) {
-          console.error(`❌ Error loading ${categoryKey}:`, error);
-        } finally {
-          setIsLoadingBatch(false);
+          backgroundCards.push(...taggedCards);
+          console.log(`✅ Loaded ${cards.length} ${category} cards`);
         }
       }
+
+      // Now append all background cards at once (in reverse order for display)
+      if (backgroundCards.length > 0) {
+        setAllCards((prevCards) => {
+          // Append in reverse order: [NEW, MOST_VALUABLE, TOP_GAINERS, FEATURED]
+          const newArray = [...backgroundCards.reverse(), ...prevCards];
+          console.log(`📦 Total cards in array: ${newArray.length}`);
+          return newArray;
+        });
+
+        setCurrentIndex((prevIndex) => {
+          const newIndex = prevIndex + backgroundCards.length;
+          console.log(`📍 Updated index from ${prevIndex} to ${newIndex}`);
+          return newIndex;
+        });
+      }
+
+      console.log("🎉 All 80 cards loaded!");
     };
 
-    loadNextBatch();
-  }, [
-    currentIndex,
-    loadingStep,
-    isLoadingBatch,
-    isInitialLoading,
-    allCards.length,
-    loadedCategories,
-  ]);
+    loadCards();
+  }, []);
+
+  // No progressive loading - all cards loaded upfront
 
   // Close tab menu when clicking outside
   useEffect(() => {
@@ -379,32 +333,13 @@ export default function Demo() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTabMenu]);
 
-  // Detect when all cards are done (only after going through all phases)
+  // Detect when all cards are done
   useEffect(() => {
-    // Only show popup when:
-    // 1. We've reached the NEW cards phase (step 3)
-    // 2. We've tried loading NEW cards
-    // 3. User has swiped through all cards (currentIndex < 0)
-    // 4. We have loaded at least 60 cards (20 FEATURED + 20 MOST_VALUABLE + 20 TOP_GAINERS)
-    // 5. Not currently in initial loading
-    if (
-      !isInitialLoading &&
-      loadingStep === 3 &&
-      hasTriedLoadingNew &&
-      currentIndex < 0 &&
-      allCards.length >= 60 &&
-      !isLoadingBatch
-    ) {
+    // Show popup when user has swiped through all cards
+    if (!isInitialLoading && currentIndex < 0 && allCards.length > 0) {
       setShowAllDoneMessage(true);
     }
-  }, [
-    currentIndex,
-    isInitialLoading,
-    allCards.length,
-    loadingStep,
-    hasTriedLoadingNew,
-    isLoadingBatch,
-  ]);
+  }, [currentIndex, isInitialLoading, allCards.length]);
 
   const walletActionDefinitions: WalletActionDefinition[] = [];
 
@@ -653,14 +588,30 @@ export default function Demo() {
                 `}</style>
               </div>
             ) : (
-              /* Swipe Cards - Infinite scroll */
-              <SwipeCards
-                cards={allCards.length > 0 ? allCards : undefined}
-                initialIndex={currentIndex}
-                onBuy={handleBuy}
-                onPass={handlePass}
-                onIndexChange={handleSwipeProgress}
-              />
+              <div>
+                {/* Swipe Cards */}
+                <SwipeCards
+                  cards={allCards.length > 0 ? allCards : undefined}
+                  initialIndex={currentIndex}
+                  onBuy={handleBuy}
+                  onPass={handlePass}
+                  onIndexChange={handleSwipeProgress}
+                />
+
+                {/* Category Display */}
+                {currentIndex >= 0 && allCards[currentIndex] && (
+                  <div className="mt-4 text-center">
+                    <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg">
+                      <p className="text-xs font-semibold text-white">
+                        {allCards[currentIndex].category}
+                        <span className="ml-2 opacity-75">
+                          ({currentIndex + 1}/{allCards.length})
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* All Done Popup */}
