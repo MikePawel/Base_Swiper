@@ -6,7 +6,7 @@ export const METADATA = {
   description: "A demo mini app for testing capabilities on Base using MiniKit",
   bannerImageUrl: "https://i.imgur.com/2bsV8mV.png",
   iconImageUrl: "https://i.imgur.com/brcnijg.png",
-  homeUrl: process.env.NEXT_PUBLIC_URL ?? "https://mike-pawel.vercel.app",
+  homeUrl: process.env.NEXT_PUBLIC_URL ?? "https://base-swiper.vercel.app",
   splashBackgroundColor: "#FFFFFF",
 };
 

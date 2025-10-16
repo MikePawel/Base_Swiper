@@ -37,17 +37,23 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
   // Track touch/mouse position to detect tap vs drag
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  const updateCurrentIndex = (val: number) => {
-    setCurrentIndex(val);
-    currentIndexRef.current = val;
-    if (onIndexChange) {
-      onIndexChange(val);
-    }
-  };
+  const updateCurrentIndex = React.useCallback(
+    (val: number) => {
+      setCurrentIndex(val);
+      currentIndexRef.current = val;
+      if (onIndexChange) {
+        onIndexChange(val);
+      }
+    },
+    [onIndexChange]
+  );
 
-  // Initialize with saved index
+  // Initialize with saved index and sync when props change
   React.useEffect(() => {
     if (initialCards && initialCards.length > 0) {
+      console.log(
+        `SwipeCards: Syncing ${initialCards.length} cards, index ${initialIndex}`
+      );
       setCards([...initialCards]);
       const startIndex =
         initialIndex !== undefined && initialIndex >= 0
@@ -55,7 +61,7 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
           : initialCards.length - 1;
       updateCurrentIndex(startIndex);
     }
-  }, [initialCards, initialIndex]);
+  }, [initialCards, initialIndex, updateCurrentIndex]);
 
   const childRefs = useMemo(
     () =>

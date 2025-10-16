@@ -306,12 +306,18 @@ export default function Demo() {
         if (backgroundCards.length > 0) {
           const reversedCards = [...backgroundCards].reverse();
 
+          console.log(
+            `📦 About to add ${reversedCards.length} background cards`
+          );
+
           setAllCards((prevCards) => {
             if (!prevCards || prevCards.length === 0) {
               return reversedCards;
             }
             const newArray = [...reversedCards, ...prevCards];
-            console.log(`📦 Total cards in array: ${newArray.length}`);
+            console.log(
+              `📦 Total cards in array: ${newArray.length}, prev was ${prevCards.length}`
+            );
             return newArray;
           });
 
@@ -320,6 +326,10 @@ export default function Demo() {
             console.log(`📍 Updated index from ${prevIndex} to ${newIndex}`);
             return newIndex;
           });
+
+          console.log(
+            `✅ Background cards added, should now have 80 cards total`
+          );
         }
 
         console.log("🎉 All 80 cards loaded!");

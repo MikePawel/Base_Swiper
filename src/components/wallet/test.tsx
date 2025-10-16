@@ -173,6 +173,9 @@ export function transformCoinDetailsToCard(
   };
 }
 
+// Counter to ensure unique IDs across all categories
+let globalCardIdCounter = 0;
+
 export function transformZoraToCards(zoraData: ZoraApiResponse): CardData[] {
   if (!zoraData?.exploreList?.edges) {
     return [];
@@ -180,6 +183,7 @@ export function transformZoraToCards(zoraData: ZoraApiResponse): CardData[] {
 
   return zoraData.exploreList.edges.map((edge: ZoraToken, index: number) => {
     const token = edge.node;
+    globalCardIdCounter++; // Increment global counter for unique IDs
 
     // Get image URL from mediaContent
     const imageUrl =
@@ -211,7 +215,7 @@ export function transformZoraToCards(zoraData: ZoraApiResponse): CardData[] {
     };
 
     return {
-      id: index + 1,
+      id: globalCardIdCounter, // Use global counter for unique IDs
       name: token.name || "Unnamed Token",
       description,
       imageUrl,
