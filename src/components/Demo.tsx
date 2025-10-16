@@ -51,7 +51,7 @@ export default function Demo() {
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
   const [hasTriedLoadingNew, setHasTriedLoadingNew] = useState(false);
-  
+
   // Track which categories have been loaded to prevent duplicates
   const [loadedCategories, setLoadedCategories] = useState<Set<string>>(
     new Set()
