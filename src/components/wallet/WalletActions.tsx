@@ -212,12 +212,12 @@ export function WalletConnect() {
                 Connected
               </span>
             </div>
-            <Button
+            <button
               onClick={handleWeb3AuthDisconnect}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-md font-medium transition-colors"
             >
               Disconnect
-            </Button>
+            </button>
           </div>
 
           {/* Wallet Card */}

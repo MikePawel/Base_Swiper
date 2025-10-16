@@ -20,6 +20,9 @@ import {
   transformZoraToCards,
   ListType,
 } from "~/components/wallet/test";
+import LoginPromptModal from "~/components/LoginPromptModal";
+import SetAmountModal from "~/components/SetAmountModal";
+import Toast from "~/components/Toast";
 import {
   USDC_CONTRACT,
   ERC20_ABI,
@@ -59,6 +62,19 @@ export default function Demo() {
   // Track when all cards are swiped
   const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
 
+  // Login and amount setting modals
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAmountModal, setShowAmountModal] = useState(false);
+  const [usdcAmountPerSwipe, setUsdcAmountPerSwipe] = useState<string>("0.1");
+  const [pendingBuyCard, setPendingBuyCard] = useState<CardData | null>(null);
+
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error" | "info">(
+    "success"
+  );
+  const [showToast, setShowToast] = useState(false);
+
   const { data: wagmiWalletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const [customWalletClient, setCustomWalletClient] = useState<any>(null);
@@ -95,6 +111,31 @@ export default function Demo() {
   // Use Web3Auth address if available, otherwise fallback
   const userAddress = (web3AuthAddress || address) as `0x${string}` | undefined;
 
+  // Load USDC amount from localStorage on mount
+  useEffect(() => {
+    const savedAmount = localStorage.getItem("usdcAmountPerSwipe");
+    if (savedAmount) {
+      setUsdcAmountPerSwipe(savedAmount);
+    }
+  }, []);
+
+  // Save USDC amount to localStorage
+  const saveUsdcAmount = (amount: string) => {
+    setUsdcAmountPerSwipe(amount);
+    localStorage.setItem("usdcAmountPerSwipe", amount);
+    console.log(`💰 Saved USDC amount: ${amount}`);
+  };
+
+  // Show toast notification
+  const showToastNotification = (
+    message: string,
+    type: "success" | "error" | "info" = "success"
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
   // Fetch USDC balance
   const { data: usdcBalanceData } = useReadContract({
     address: USDC_CONTRACT,
@@ -113,13 +154,38 @@ export default function Demo() {
   });
 
   const handleBuy = async (card: CardData) => {
+    // Check if user is logged in FIRST
+    if (!isWeb3AuthConnected || !userAddress) {
+      console.log("⚠️ User not logged in, showing login prompt");
+      setPendingBuyCard(card); // Save the card they tried to buy
+      setShowLoginModal(true);
+      // Restore the card by incrementing the index back
+      setCurrentIndex((prev) => prev + 1);
+      return;
+    }
+
+    // Check if amount is set
+    const hasSetAmount = localStorage.getItem("usdcAmountPerSwipe");
+    if (!hasSetAmount) {
+      console.log("💰 Amount not set, showing amount modal");
+      setPendingBuyCard(card);
+      setShowAmountModal(true);
+      // Restore the card by incrementing the index back
+      setCurrentIndex((prev) => prev + 1);
+      return;
+    }
+
+    // Proceed with the buy
+    await executeBuy(card);
+  };
+
+  const executeBuy = async (card: CardData) => {
     setBuyList((prev) => [...prev, card]);
     console.log("Added to buy list:", card);
 
-    // Check if Web3Auth is connected and has sufficient USDC
+    // Safety check
     if (!isWeb3AuthConnected || !userAddress) {
       console.log("⚠️ Wallet not connected");
-      alert("Please connect your Web3Auth wallet first!");
       return;
     }
 
@@ -142,16 +208,16 @@ export default function Demo() {
       return;
     }
 
-    if (!checkSufficientBalance(usdcBalance, "0.1")) {
+    if (!checkSufficientBalance(usdcBalance, usdcAmountPerSwipe)) {
       console.log(
         `⚠️ Insufficient USDC balance. Have: ${formatUSDCBalance(
           usdcBalance
-        )} USDC, Need: 0.1 USDC`
+        )} USDC, Need: ${usdcAmountPerSwipe} USDC`
       );
       alert(
         `⚠️ Insufficient USDC!\n\nYou have: ${formatUSDCBalance(
           usdcBalance
-        )} USDC\nYou need: 0.1 USDC`
+        )} USDC\nYou need: ${usdcAmountPerSwipe} USDC`
       );
       return;
     }
@@ -174,7 +240,9 @@ export default function Demo() {
     }
 
     try {
-      console.log(`🔄 Starting purchase: 0.1 USDC → ${card.name}`);
+      console.log(
+        `🔄 Starting purchase: ${usdcAmountPerSwipe} USDC → ${card.name}`
+      );
       console.log("Using wallet client:", activeWalletClient);
 
       // Set up trade parameters using Zora Coins SDK
@@ -187,7 +255,7 @@ export default function Demo() {
           type: "erc20",
           address: card.coinData.address as `0x${string}`, // Creator Coin address
         },
-        amountIn: BigInt(0.1 * 10 ** 6), // 0.1 USDC (6 decimals)
+        amountIn: BigInt(parseFloat(usdcAmountPerSwipe) * 10 ** 6), // USDC amount (6 decimals)
         slippage: 0.05, // 5% slippage
         sender: userAddress,
       };
@@ -205,6 +273,9 @@ export default function Demo() {
       console.log(`✅ Successfully purchased ${card.name}!`);
       console.log("Transaction receipt:", receipt);
 
+      // Show success toast
+      showToastNotification("Transaction finalized", "success");
+
       // Trigger haptic feedback for success
       try {
         await sdk.haptics.notificationOccurred("success");
@@ -213,6 +284,9 @@ export default function Demo() {
       }
     } catch (error) {
       console.error("❌ Purchase failed:", error);
+
+      // Show error toast
+      showToastNotification("Transaction failed", "error");
 
       // Trigger haptic feedback for error
       try {
@@ -408,6 +482,46 @@ export default function Demo() {
     setCurrentIndex(index);
   };
 
+  // Handle login from modal
+  const handleLoginFromModal = () => {
+    setShowLoginModal(false);
+    setActiveTab("wallet");
+    console.log("🔐 Redirecting to wallet tab for login");
+  };
+
+  // Handle amount set
+  const handleSetAmount = (amount: string) => {
+    saveUsdcAmount(amount);
+    setShowAmountModal(false);
+
+    // If there was a pending card, switch back to swipe tab so user can swipe again
+    if (pendingBuyCard) {
+      console.log("💳 Amount set! Returning to swipe tab");
+      setActiveTab("swipe");
+      setPendingBuyCard(null);
+
+      // Show a brief haptic feedback
+      try {
+        sdk.haptics.notificationOccurred("success");
+      } catch (error) {
+        console.log("Haptics not supported:", error);
+      }
+    }
+  };
+
+  // Check if user just logged in and needs to set amount
+  useEffect(() => {
+    if (isWeb3AuthConnected) {
+      const hasSetAmount = localStorage.getItem("usdcAmountPerSwipe");
+      if (!hasSetAmount) {
+        console.log("🎉 User just logged in, showing amount modal");
+        setTimeout(() => {
+          setShowAmountModal(true);
+        }, 500); // Small delay to ensure smooth transition
+      }
+    }
+  }, [isWeb3AuthConnected]);
+
   return (
     <div
       style={{
@@ -452,7 +566,7 @@ export default function Demo() {
 
               {/* Dropdown Menu for Tab Navigation */}
               {showTabMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-xl shadow-lg z-[9999] overflow-hidden">
                   <div className="py-1">
                     <button
                       onClick={() => handleTabChange("swipe")}
@@ -623,24 +737,6 @@ export default function Demo() {
                   onPass={handlePass}
                   onIndexChange={handleSwipeProgress}
                 />
-
-                {/* Category Display */}
-                {currentIndex >= 0 &&
-                  allCards &&
-                  allCards.length > 0 &&
-                  currentIndex < allCards.length &&
-                  allCards[currentIndex] && (
-                    <div className="mt-4 text-center">
-                      <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg">
-                        <p className="text-xs font-semibold text-white">
-                          {allCards[currentIndex]?.category || "Loading..."}
-                          <span className="ml-2 opacity-75">
-                            ({currentIndex + 1}/{allCards.length})
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  )}
               </div>
             )}
 
@@ -776,6 +872,34 @@ export default function Demo() {
                     {/* Connection Status */}
                     <WalletConnect />
 
+                    {/* Spending Amount Setting */}
+                    {isWeb3AuthConnected && (
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-xs font-medium text-gray-600 mb-1">
+                              Spending Amount
+                            </div>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {usdcAmountPerSwipe}{" "}
+                              <span className="text-lg text-gray-500">
+                                USDC
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Per token purchase
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setShowAmountModal(true)}
+                            className="bg-white hover:bg-gray-50 text-blue-600 font-medium px-4 py-2 rounded-lg border border-blue-200 transition-colors text-sm"
+                          >
+                            Change
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Wallet Action Cells */}
                     <div className="space-y-2">
                       {walletActionDefinitions.map((walletAction) => (
@@ -834,6 +958,33 @@ export default function Demo() {
           </div>
         )}
       </div>
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLoginFromModal}
+      />
+
+      {/* Set Amount Modal */}
+      <SetAmountModal
+        isOpen={showAmountModal}
+        onClose={() => {
+          setShowAmountModal(false);
+          setPendingBuyCard(null); // Clear pending card if user cancels
+        }}
+        onSetAmount={handleSetAmount}
+        currentAmount={usdcAmountPerSwipe}
+        isFirstTime={!localStorage.getItem("usdcAmountPerSwipe")}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
+      />
     </div>
   );
 }
