@@ -46,6 +46,32 @@ interface ZoraApiResponse {
   };
 }
 
+interface CoinDetailsResponse {
+  zora20Token?: {
+    name?: string;
+    symbol?: string;
+    description?: string;
+    address?: string;
+    totalSupply?: string;
+    marketCap?: string;
+    volume24h?: string;
+    uniqueHolders?: number;
+    creatorAddress?: string;
+    createdAt?: string;
+    chainId?: number;
+    creatorProfile?: {
+      handle?: string;
+    };
+    mediaContent?: {
+      previewImage?: {
+        medium?: string;
+        small?: string;
+      };
+      originalUri?: string;
+    };
+  };
+}
+
 export async function fetchZoraExplore(listType: ListType = "NEW") {
   try {
     const response = await fetch(
@@ -94,7 +120,7 @@ export async function fetchCoinDetails(address: Address, chain: number = 8453) {
  * This can be used to update a card with fresh data after fetching
  */
 export function transformCoinDetailsToCard(
-  coinData: any,
+  coinData: CoinDetailsResponse,
   id: number = 1
 ): CardData {
   const coin = coinData?.zora20Token;

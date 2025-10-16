@@ -44,7 +44,8 @@ export default function Demo() {
   const [newCards, setNewCards] = useState<CardData[]>([]);
   const [valuableCards, setValuableCards] = useState<CardData[]>([]);
   const [gainersCards, setGainersCards] = useState<CardData[]>([]);
-  const [listType, setListType] = useState<ListType>("NEW");
+  const [featuredCards, setFeaturedCards] = useState<CardData[]>([]);
+  const [listType, setListType] = useState<ListType>("FEATURED");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showTabMenu, setShowTabMenu] = useState(false);
 
@@ -53,10 +54,12 @@ export default function Demo() {
     NEW: number;
     MOST_VALUABLE: number;
     TOP_GAINERS: number;
+    FEATURED: number;
   }>({
     NEW: -1,
     MOST_VALUABLE: -1,
     TOP_GAINERS: -1,
+    FEATURED: -1,
   });
 
   const handleBuy = (card: CardData) => {
@@ -86,12 +89,14 @@ export default function Demo() {
     const getAllZoraData = async () => {
       setIsInitialLoading(true);
 
-      // Fetch all three types in parallel
-      const [newData, valuableData, gainersData] = await Promise.all([
-        fetchZoraExplore("NEW"),
-        fetchZoraExplore("MOST_VALUABLE"),
-        fetchZoraExplore("TOP_GAINERS"),
-      ]);
+      // Fetch all four types in parallel
+      const [newData, valuableData, gainersData, featuredData] =
+        await Promise.all([
+          fetchZoraExplore("NEW"),
+          fetchZoraExplore("MOST_VALUABLE"),
+          fetchZoraExplore("TOP_GAINERS"),
+          fetchZoraExplore("FEATURED"),
+        ]);
 
       if (newData) {
         const cards = transformZoraToCards(newData);
@@ -106,6 +111,11 @@ export default function Demo() {
       if (gainersData) {
         const cards = transformZoraToCards(gainersData);
         setGainersCards(cards);
+      }
+
+      if (featuredData) {
+        const cards = transformZoraToCards(featuredData);
+        setFeaturedCards(cards);
       }
 
       setIsInitialLoading(false);
@@ -209,8 +219,10 @@ export default function Demo() {
         return valuableCards;
       case "TOP_GAINERS":
         return gainersCards;
+      case "FEATURED":
+        return featuredCards;
       default:
-        return newCards;
+        return featuredCards;
     }
   };
 
@@ -229,6 +241,7 @@ export default function Demo() {
         NEW: newCards.length - 1,
         MOST_VALUABLE: valuableCards.length - 1,
         TOP_GAINERS: gainersCards.length - 1,
+        FEATURED: featuredCards.length - 1,
       });
     }
   }, [
@@ -236,6 +249,7 @@ export default function Demo() {
     newCards.length,
     valuableCards.length,
     gainersCards.length,
+    featuredCards.length,
   ]);
 
   return (
@@ -376,14 +390,14 @@ export default function Demo() {
               {!isInitialLoading && (
                 <div className="flex gap-2 p-1 bg-white border border-border rounded-lg">
                   <button
-                    onClick={() => handleListTypeChange("NEW")}
+                    onClick={() => handleListTypeChange("FEATURED")}
                     className={`flex-1 py-2 px-3 text-sm font-medium transition-all duration-200 rounded-md whitespace-nowrap ${
-                      listType === "NEW"
+                      listType === "FEATURED"
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-background"
                     }`}
                   >
-                    🆕 New
+                    ⭐ Featured
                   </button>
                   <button
                     onClick={() => handleListTypeChange("MOST_VALUABLE")}
