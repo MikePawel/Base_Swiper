@@ -27,7 +27,6 @@ import {
 } from "@web3auth/modal/react";
 import { SiweMessage } from "siwe";
 import { setApiKey } from "@zoralabs/coins-sdk";
-import { walletServicesPlugin } from "~/lib/web3authConfig";
 import { CreditCard } from "lucide-react";
 
 // Set up your API key before making any SDK requests
@@ -177,12 +176,13 @@ export function WalletConnect() {
       return;
     }
 
-    // For now, redirect to a third-party on-ramp service
-    // You can use services like Transak, MoonPay, or Stripe
-    const transakUrl = `https://global.transak.com/?apiKey=YOUR_API_KEY&walletAddress=${displayAddress}&cryptoCurrencyCode=ETH,USDC&network=base&defaultCryptoCurrency=USDC`;
-    
+    // Using Transak as the on-ramp provider
+    // Get your API key from https://transak.com/
+    // Alternative services: MoonPay, Stripe, Coinbase Pay
+    const transakUrl = `https://global.transak.com/?apiKey=YOUR_TRANSAK_API_KEY&walletAddress=${displayAddress}&cryptoCurrencyCode=ETH,USDC&network=base&defaultCryptoCurrency=USDC&disableWalletAddressForm=true`;
+
     // Open in new window
-    window.open(transakUrl, '_blank', 'noopener,noreferrer');
+    window.open(transakUrl, "_blank", "noopener,noreferrer");
   };
 
   // Format USDC balance (6 decimals)
