@@ -870,9 +870,6 @@ export default function Demo() {
               <div>
                 {currentWalletPage === "list" ? (
                   <div className="space-y-4">
-                    {/* Connection Status */}
-                    <WalletConnect />
-
                     {/* Spending Amount Setting */}
                     {isWeb3AuthConnected && (
                       <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
@@ -900,6 +897,9 @@ export default function Demo() {
                         </div>
                       </div>
                     )}
+
+                    {/* Connection Status */}
+                    <WalletConnect />
 
                     {/* Wallet Action Cells */}
                     <div className="space-y-2">
