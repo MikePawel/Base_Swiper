@@ -65,7 +65,15 @@ const renderError = (error: Error | null): React.ReactElement | null => {
   return <div className="text-red-500 text-xs mt-1">{error.message}</div>;
 };
 
-export function WalletConnect() {
+interface WalletConnectProps {
+  usdcAmountPerSwipe?: string;
+  onChangeAmount?: () => void;
+}
+
+export function WalletConnect({
+  usdcAmountPerSwipe,
+  onChangeAmount,
+}: WalletConnectProps = {}) {
   const { address, chain } = useAccount();
   const chainId = useChainId();
   const { web3Auth, status, provider } = useWeb3Auth();
@@ -347,6 +355,32 @@ export function WalletConnect() {
               </div>
             </div>
           </div>
+
+          {/* Spending Amount Setting */}
+          {usdcAmountPerSwipe !== undefined && onChangeAmount && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">
+                    Spending Amount
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {usdcAmountPerSwipe}{" "}
+                    <span className="text-lg text-gray-500">USDC</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Per token purchase
+                  </div>
+                </div>
+                <button
+                  onClick={onChangeAmount}
+                  className="bg-white hover:bg-gray-50 text-blue-600 font-medium px-4 py-2 rounded-lg border border-blue-200 transition-colors text-sm"
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Export Private Key Section */}
           <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
