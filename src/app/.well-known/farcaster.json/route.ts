@@ -1,52 +1,34 @@
-import { METADATA } from "../../../lib/utils";
-
 export async function GET() {
   const config = {
+    frame: {
+      name: "Base Swiper",
+      version: "1",
+      iconUrl:
+        "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/icon.png",
+      homeUrl: "https://base-swiper.vercel.app",
+      imageUrl:
+        "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/icon.png",
+      buttonTitle: "Open mini app",
+      splashImageUrl: "https://base-swiper.vercel.app/splash.png",
+      splashBackgroundColor: "#0000FF",
+      webhookUrl: "https://base-swiper.vercel.app/api/webhook",
+      subtitle: "Base Swiper — Tinder for Zora",
+      description:
+        "Swipe through Zora collectibles and instantly buy them on Base",
+      primaryCategory: "finance",
+      tags: ["social", "art", "finance", "tinder", "swipe"],
+      heroImageUrl:
+        "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
+      tagline: "Tinder for Zora",
+      ogTitle: "Base Swiper — Tinder for Zora",
+    },
     accountAssociation: {
       header:
-        "eyJmaWQiOjEyMTQyLCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4MDRlNkYxMTFlQmY2RkQyNTU3NmQ0ODA0ODA5NjI0MzVEYzNhYThEOCJ9",
-      payload: "eyJkb21haW4iOiJmcmFtZXMtdjItZGVtby1saWxhYy52ZXJjZWwuYXBwIn0",
+        "eyJmaWQiOjEzODYxODksInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0NTZGNWExYjM0MTE4YzVEOGY1ZmVjMDhlYjREYTc2Y0JBZmMzQkQ4In0",
+      payload: "eyJkb21haW4iOiJiYXNlLXN3aXBlci52ZXJjZWwuYXBwIn0",
       signature:
-        "MHg5MGI1YzA0Zjc3MGY1M2I4M2I3OGQzOTMwNTNjMmJjZjUwNmE3ZThjNDViYmEwNDk2OTcwZTM1ZTQ0YzU2MGU1Nzc4Y2Y1ZTJkNDY2YzE1MWQxNGMzYmFjNzM3ZDcxZGEwZDVjYWJmMGMzZTdhYTc2YzRjMmQ5MmE5NDJhYjkyODFj",
+        "j57ZkIsDuRnJm9529PpTNN0ZRo82vDpSiWj/0+x9HWkDZpF4Agfy7+6/2bQ7oXR4l0LHSShfnsqLWtrdRRyY6Bs=",
     },
-      "frame": {
-        "version": "1",
-        "name": METADATA.name,
-        "iconUrl": METADATA.iconImageUrl,
-        "homeUrl": METADATA.homeUrl,
-        "imageUrl": METADATA.bannerImageUrl,
-        "splashImageUrl": METADATA.iconImageUrl,
-        "splashBackgroundColor": METADATA.splashBackgroundColor,
-        "description": METADATA.description,
-        "ogTitle": METADATA.name,
-        "ogDescription": METADATA.description,
-        "ogImageUrl": METADATA.bannerImageUrl,
-        "requiredCapabilities": [
-          "actions.ready",
-          "actions.signIn", 
-          "actions.openMiniApp",
-          "actions.openUrl",
-          "actions.sendToken",
-          "actions.viewToken", 
-          "actions.composeCast",
-          "actions.viewProfile",
-          "actions.setPrimaryButton",
-          "actions.swapToken",
-          "actions.close",
-          "actions.viewCast",
-          "wallet.getEthereumProvider"
-        ],
-        "requiredChains": [
-          "eip155:8453",
-          "eip155:10"
-        ],
-        "canonicalDomain": "https://fulldemo-minikit.vercel.app",
-        "noindex": false,
-        "tags": ["base", "baseapp", "miniapp", "demo", "basepay"]
-      },
-      "baseBuilder": {
-        "allowedAddresses": ["0x8342A48694A74044116F330db5050a267b28dD85"],
-      }
   };
 
   return Response.json(config);
