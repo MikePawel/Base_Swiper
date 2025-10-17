@@ -32,6 +32,7 @@ import {
 import { tradeCoin, type TradeParameters } from "@zoralabs/coins-sdk";
 import { createWalletClient, custom } from "viem";
 import { base } from "viem/chains";
+import { Wallet, TrendingUp, Layers } from "lucide-react";
 
 type TabType = "swipe" | "buylist" | "wallet";
 type WalletPageType = "list" | "basepay" | "wallet";
@@ -574,7 +575,7 @@ export default function Demo() {
                         activeTab === "swipe" ? "bg-blue-50" : ""
                       }`}
                     >
-                      <span className="text-xl">🔄</span>
+                      <Layers className="w-5 h-5 text-gray-700" />
                       <div>
                         <div className="font-medium text-sm">Swipe</div>
                         <div className="text-xs text-muted-foreground">
@@ -591,7 +592,7 @@ export default function Demo() {
                         activeTab === "wallet" ? "bg-blue-50" : ""
                       }`}
                     >
-                      <span className="text-xl">👛</span>
+                      <Wallet className="w-5 h-5 text-gray-700" />
                       <div>
                         <div className="font-medium text-sm">Wallet</div>
                         <div className="text-xs text-muted-foreground">
@@ -608,7 +609,7 @@ export default function Demo() {
                         activeTab === "buylist" ? "bg-blue-50" : ""
                       }`}
                     >
-                      <span className="text-xl">🛒</span>
+                      <TrendingUp className="w-5 h-5 text-gray-700" />
                       <div>
                         <div className="font-medium text-sm">Buy List</div>
                         <div className="text-xs text-muted-foreground">
