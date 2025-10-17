@@ -27,8 +27,6 @@ import {
 } from "@web3auth/modal/react";
 import { SiweMessage } from "siwe";
 import { setApiKey } from "@zoralabs/coins-sdk";
-import EmbeddedBrowserWarning from "~/components/EmbeddedBrowserWarning";
-import { sdk } from "@farcaster/miniapp-sdk";
 
 // Set up your API key before making any SDK requests
 if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
@@ -194,28 +192,11 @@ export function WalletConnect() {
     ? parseFloat(ethBalance.formatted).toFixed(4)
     : "0";
 
-  // Handle opening in external browser
-  const handleOpenExternal = async () => {
-    try {
-      const currentUrl = window.location.href;
-      await sdk.actions.openUrl(currentUrl);
-    } catch (error) {
-      console.error("Failed to open external browser:", error);
-      // Fallback: show instructions
-      alert(
-        "Please copy the current URL and open it in your regular browser (Chrome, Safari, etc.)"
-      );
-    }
-  };
-
   return (
     <>
       {/* Show connection options only when NOT connected */}
       {!isWeb3AuthConnected && (
         <div className="space-y-3">
-          {/* Show warning if in embedded browser */}
-          <EmbeddedBrowserWarning onOpenExternal={handleOpenExternal} />
-
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-1">
               Connect Wallet
