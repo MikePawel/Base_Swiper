@@ -170,25 +170,19 @@ export function WalletConnect() {
     }
   };
 
-  // Handle top-up via Web3Auth Wallet Services
-  const handleTopUp = async () => {
-    if (!web3Auth || !isWeb3AuthConnected) {
-      console.error("Web3Auth not connected");
+  // Handle top-up - open external on-ramp service
+  const handleTopUp = () => {
+    if (!isWeb3AuthConnected || !displayAddress) {
+      alert("Please connect your wallet first");
       return;
     }
 
-    try {
-      // Add the plugin if not already added
-      if (!web3Auth.plugins[walletServicesPlugin.name]) {
-        await web3Auth.addPlugin(walletServicesPlugin);
-      }
-
-      // Show the top-up/checkout interface
-      await walletServicesPlugin.showCheckout();
-    } catch (error) {
-      console.error("Failed to open top-up:", error);
-      alert("Failed to open top-up interface. Please try again.");
-    }
+    // For now, redirect to a third-party on-ramp service
+    // You can use services like Transak, MoonPay, or Stripe
+    const transakUrl = `https://global.transak.com/?apiKey=YOUR_API_KEY&walletAddress=${displayAddress}&cryptoCurrencyCode=ETH,USDC&network=base&defaultCryptoCurrency=USDC`;
+    
+    // Open in new window
+    window.open(transakUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Format USDC balance (6 decimals)
