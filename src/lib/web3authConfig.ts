@@ -1,7 +1,6 @@
 import { type Web3AuthContextConfig } from "@web3auth/modal/react";
 import { WEB3AUTH_NETWORK, type Web3AuthOptions } from "@web3auth/modal";
 import { CHAIN_NAMESPACES } from "@web3auth/base";
-import { WalletServicesPlugin } from "@web3auth/wallet-services-plugin";
 
 // Base Mainnet configuration
 const chainConfig = {
@@ -35,15 +34,6 @@ const web3AuthOptions: Web3AuthOptions = {
 const web3AuthContextConfig: Web3AuthContextConfig = {
   web3AuthOptions,
 };
-
-// Initialize Wallet Services Plugin for top-up functionality
-export const walletServicesPlugin = new WalletServicesPlugin({
-  walletInitOptions: {
-    whiteLabel: {
-      showWidgetButton: false, // We'll use our own button
-    },
-  },
-});
 
 export default web3AuthContextConfig;
 export { chainConfig };

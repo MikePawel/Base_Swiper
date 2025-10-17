@@ -27,7 +27,6 @@ import {
 } from "@web3auth/modal/react";
 import { SiweMessage } from "siwe";
 import { setApiKey } from "@zoralabs/coins-sdk";
-import { CreditCard } from "lucide-react";
 
 // Set up your API key before making any SDK requests
 if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
@@ -169,22 +168,6 @@ export function WalletConnect() {
     }
   };
 
-  // Handle top-up - open external on-ramp service
-  const handleTopUp = () => {
-    if (!isWeb3AuthConnected || !displayAddress) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    // Using Transak as the on-ramp provider
-    // Get your API key from https://transak.com/
-    // Alternative services: MoonPay, Stripe, Coinbase Pay
-    const transakUrl = `https://global.transak.com/?apiKey=YOUR_TRANSAK_API_KEY&walletAddress=${displayAddress}&cryptoCurrencyCode=ETH,USDC&network=base&defaultCryptoCurrency=USDC&disableWalletAddressForm=true`;
-
-    // Open in new window
-    window.open(transakUrl, "_blank", "noopener,noreferrer");
-  };
-
   // Format USDC balance (6 decimals)
   const formattedUsdcBalance = usdcBalance
     ? formatUnits(usdcBalance as bigint, 6)
@@ -311,20 +294,6 @@ export function WalletConnect() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Top Up Button */}
-            <div className="pt-2">
-              <Button
-                onClick={handleTopUp}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm py-3 font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-4 h-4" />
-                Top Up with Card
-              </Button>
-              <p className="text-xs text-gray-500 text-center mt-2">
-                Buy crypto with credit/debit card or bank transfer
-              </p>
             </div>
           </div>
 
