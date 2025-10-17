@@ -27,6 +27,8 @@ import {
 } from "@web3auth/modal/react";
 import { SiweMessage } from "siwe";
 import { setApiKey } from "@zoralabs/coins-sdk";
+import { walletServicesPlugin } from "~/lib/web3authConfig";
+import { CreditCard } from "lucide-react";
 
 // Set up your API key before making any SDK requests
 if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
@@ -168,6 +170,27 @@ export function WalletConnect() {
     }
   };
 
+  // Handle top-up via Web3Auth Wallet Services
+  const handleTopUp = async () => {
+    if (!web3Auth || !isWeb3AuthConnected) {
+      console.error("Web3Auth not connected");
+      return;
+    }
+
+    try {
+      // Add the plugin if not already added
+      if (!web3Auth.plugins[walletServicesPlugin.name]) {
+        await web3Auth.addPlugin(walletServicesPlugin);
+      }
+
+      // Show the top-up/checkout interface
+      await walletServicesPlugin.showCheckout();
+    } catch (error) {
+      console.error("Failed to open top-up:", error);
+      alert("Failed to open top-up interface. Please try again.");
+    }
+  };
+
   // Format USDC balance (6 decimals)
   const formattedUsdcBalance = usdcBalance
     ? formatUnits(usdcBalance as bigint, 6)
@@ -294,6 +317,20 @@ export function WalletConnect() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Top Up Button */}
+            <div className="pt-2">
+              <Button
+                onClick={handleTopUp}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm py-3 font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                Top Up with Card
+              </Button>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Buy crypto with credit/debit card or bank transfer
+              </p>
             </div>
           </div>
 
