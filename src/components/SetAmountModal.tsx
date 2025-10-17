@@ -116,7 +116,7 @@ const SetAmountModal: React.FC<SetAmountModalProps> = ({
 
           {/* Quick Select Buttons */}
           <div className="grid grid-cols-4 gap-2">
-            {["0.1", "0.5", "1", "5"].map((preset) => (
+            {["0.1", "1", "10", "100"].map((preset) => (
               <button
                 key={preset}
                 onClick={() => setAmount(preset)}
