@@ -17,16 +17,6 @@ const chainConfig = {
 const web3AuthOptions: Web3AuthOptions = {
   clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "YOUR_CLIENT_ID", // Get your Client ID from Web3Auth Dashboard
   web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET, // Use SAPPHIRE_DEVNET for testing
-  uiConfig: {
-    appName: "Base Swiper",
-    mode: "light",
-    logoLight: "https://web3auth.io/images/web3auth-logo.svg",
-    logoDark: "https://web3auth.io/images/web3auth-logo---Dark.svg",
-    defaultLanguage: "en",
-    theme: {
-      primary: "#0052FF", // Base blue
-    },
-  },
 };
 
 const web3AuthContextConfig: Web3AuthContextConfig = {
