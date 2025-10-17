@@ -76,6 +76,7 @@ export function WalletConnect() {
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyAddressSuccess, setCopyAddressSuccess] = useState(false);
 
   const isWeb3AuthConnected = status === "connected";
 
@@ -128,6 +129,19 @@ export function WalletConnect() {
         setTimeout(() => setCopySuccess(false), 2000);
       } catch (error) {
         console.error("Failed to copy:", error);
+      }
+    }
+  };
+
+  // Copy address to clipboard
+  const handleCopyAddress = async () => {
+    if (displayAddress) {
+      try {
+        await navigator.clipboard.writeText(displayAddress);
+        setCopyAddressSuccess(true);
+        setTimeout(() => setCopyAddressSuccess(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy address:", error);
       }
     }
   };
@@ -237,8 +251,45 @@ export function WalletConnect() {
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Address
               </span>
-              <div className="font-mono text-xs text-gray-700 bg-gray-50 px-3 py-2 rounded border border-gray-200 break-all">
-                {displayAddress}
+              <div className="relative">
+                <div className="font-mono text-xs text-gray-700 bg-gray-50 px-3 py-2 pr-10 rounded border border-gray-200 break-all">
+                  {displayAddress}
+                </div>
+                <button
+                  onClick={handleCopyAddress}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-gray-200 rounded transition-colors"
+                  title="Copy address"
+                >
+                  {copyAddressSuccess ? (
+                    <svg
+                      className="w-4 h-4 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4 text-gray-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  )}
+                </button>
               </div>
               <a
                 href={`https://basescan.org/address/${displayAddress}`}
