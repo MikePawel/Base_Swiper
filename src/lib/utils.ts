@@ -3,9 +3,9 @@ import { twMerge } from "tailwind-merge";
 
 export const METADATA = {
   name: "Base Swiper — Tinder for Zora",
-  description: "A demo mini app for testing capabilities on Base using MiniKit",
-  bannerImageUrl: "https://i.imgur.com/2bsV8mV.png",
-  iconImageUrl: "https://i.imgur.com/brcnijg.png",
+  description: "Swipe through Zora collectibles and instantly buy them on Base",
+  bannerImageUrl: "https://imgur.com/ZIqxpsk.png",
+  iconImageUrl: "https://imgur.com/rLshpa8.png",
   homeUrl: process.env.NEXT_PUBLIC_URL ?? "https://base-swiper.vercel.app",
   splashBackgroundColor: "#FFFFFF",
 };
