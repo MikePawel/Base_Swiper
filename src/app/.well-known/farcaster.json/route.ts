@@ -29,6 +29,9 @@ export async function GET() {
       signature:
         "j57ZkIsDuRnJm9529PpTNN0ZRo82vDpSiWj/0+x9HWkDZpF4Agfy7+6/2bQ7oXR4l0LHSShfnsqLWtrdRRyY6Bs=",
     },
+    baseBuilder: {
+      ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
+    },
   };
 
   return Response.json(config);
