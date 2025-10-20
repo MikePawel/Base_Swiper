@@ -20,7 +20,23 @@ export const minikitConfig = {
     homeUrl: "https://base-swiper.vercel.app",
     webhookUrl: "https://base-swiper.vercel.app/api/webhook",
     primaryCategory: "social",
-    tags: ["marketing", "ads", "quickstart", "waitlist"],
+    tags: [
+      "marketing",
+      "ads",
+      "quickstart",
+      "tinder",
+      "swipe",
+      "zora",
+      "collectibles",
+      "finance",
+      "art",
+      "social",
+      "tokens",
+      "trading",
+      "defi",
+      "dex",
+      "nft",
+    ],
     heroImageUrl:
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
     tagline: "Tinder for Zora",
@@ -29,8 +45,8 @@ export const minikitConfig = {
       "Swipe through Zora collectibles and instantly buy them on Base",
     ogImageUrl:
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
-    baseBuilder: {
-      ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
-    },
+  },
+  baseBuilder: {
+    ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
   },
 } as const;
