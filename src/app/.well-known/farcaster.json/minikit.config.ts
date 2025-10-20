@@ -7,9 +7,10 @@ export const minikitConfig = {
   },
   miniapp: {
     version: "1",
-    name: "Cubey",
-    subtitle: "Your AI Ad Companion",
-    description: "Ads",
+    name: "Base Swiper",
+    subtitle: "Tinder for Zora",
+    description:
+      "Swipe through Zora collectibles and instantly buy them on Base",
     screenshotUrls: [""],
     iconUrl:
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/icon.png",
