@@ -29,5 +29,8 @@ export const minikitConfig = {
       "Swipe through Zora collectibles and instantly buy them on Base",
     ogImageUrl:
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
+    baseBuilder: {
+      ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
+    },
   },
 } as const;
