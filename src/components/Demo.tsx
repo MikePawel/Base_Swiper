@@ -719,7 +719,7 @@ export default function Demo() {
                   {/* Loading Text */}
                   <div className="absolute -bottom-8 left-0 right-0 text-center">
                     <p className="text-sm text-muted-foreground animate-pulse">
-                      Loading 60 tokens...
+                      Loading amazing tokens...
                     </p>
                   </div>
                 </div>
