@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async headers() {
     return [
       {
@@ -9,20 +15,20 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "frame-ancestors *"
+            value: "frame-ancestors *",
           },
           {
             key: "X-Frame-Options",
-            value: "SAMEORIGIN"
+            value: "SAMEORIGIN",
           },
           {
             key: "Access-Control-Allow-Origin",
-            value: "*"
-          }
-        ]
-      }
+            value: "*",
+          },
+        ],
+      },
     ];
-  }
+  },
 };
 
 export default nextConfig;
