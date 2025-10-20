@@ -47,6 +47,7 @@ export const minikitConfig = {
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
   },
   baseBuilder: {
+    allowedAddresses: ["0xE8597d4f1faCa468b1cfB34730627B56923629dD"],
     ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
   },
 } as const;
