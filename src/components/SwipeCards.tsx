@@ -12,6 +12,9 @@ interface SwipeCardsProps {
   cards?: CardData[];
   initialIndex?: number;
   onIndexChange?: (index: number) => void;
+  onRefreshCards?: () => void;
+  onViewBuyList?: () => void;
+  totalCardsCount?: number;
 }
 
 const SwipeCards: React.FC<SwipeCardsProps> = ({
@@ -20,6 +23,9 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
   cards: initialCards,
   initialIndex,
   onIndexChange,
+  onRefreshCards,
+  onViewBuyList,
+  totalCardsCount,
 }) => {
   const cardsData =
     initialCards && initialCards.length > 0 ? initialCards : dummyCards;
@@ -49,19 +55,22 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
   );
 
   // Initialize with saved index and sync when props change
+  // Only sync when the cards array reference changes (new load or refresh)
   React.useEffect(() => {
     if (initialCards && initialCards.length > 0) {
       console.log(
         `SwipeCards: Syncing ${initialCards.length} cards, index ${initialIndex}`
       );
       setCards([...initialCards]);
+      setResetKey((prev) => prev + 1); // Force re-render of card refs
       const startIndex =
         initialIndex !== undefined && initialIndex >= 0
           ? initialIndex
           : initialCards.length - 1;
       updateCurrentIndex(startIndex);
     }
-  }, [initialCards, initialIndex, updateCurrentIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCards]); // Only re-sync when cards array reference changes, not on index updates
 
   const childRefs = useMemo(
     () =>
@@ -93,12 +102,6 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
 
   const outOfFrame = (cardName: string) => {
     console.log(`${cardName} left the screen!`);
-  };
-
-  const handleStartOver = () => {
-    setCards([...cardsData]);
-    updateCurrentIndex(cardsData.length - 1);
-    setResetKey((prev) => prev + 1);
   };
 
   const handleCardClick = (card: CardData) => {
@@ -319,21 +322,58 @@ const SwipeCards: React.FC<SwipeCardsProps> = ({
           );
         })}
 
-        {/* Empty State */}
+        {/* Empty State - Card-sized completion screen */}
         {currentIndex < 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center p-8 bg-white rounded-3xl shadow-xl">
-              <div className="text-6xl mb-4">🎉</div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                All Done!
-              </h3>
-              <p className="text-gray-600">You&apos;ve reviewed all items</p>
-              <button
-                onClick={handleStartOver}
-                className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors"
-              >
-                Start Over
-              </button>
+            <div
+              className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-2xl overflow-hidden"
+              style={{
+                width: "100%",
+                height: "500px",
+              }}
+            >
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-white">
+                <h2 className="text-3xl font-bold mb-4 text-center">
+                  You&apos;ve Swiped Through All Cards!
+                </h2>
+                <p className="text-white/90 text-center mb-8 text-lg">
+                  Come back later when new cards are available, or refresh to
+                  reload!
+                </p>
+
+                <div className="space-y-3 w-full max-w-xs">
+                  {onRefreshCards && (
+                    <button
+                      onClick={onRefreshCards}
+                      className="w-full py-3 px-6 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                      </svg>
+                      Refresh Cards
+                    </button>
+                  )}
+
+                  {onViewBuyList && (
+                    <button
+                      onClick={onViewBuyList}
+                      className="w-full py-3 px-6 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-colors"
+                    >
+                      View Buy List
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

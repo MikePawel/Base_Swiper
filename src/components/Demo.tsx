@@ -60,9 +60,6 @@ export default function Demo() {
   const [showTabMenu, setShowTabMenu] = useState(false);
   const [web3AuthAddress, setWeb3AuthAddress] = useState<string | null>(null);
 
-  // Track when all cards are swiped
-  const [showAllDoneMessage, setShowAllDoneMessage] = useState(false);
-
   // Login and amount setting modals
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAmountModal, setShowAmountModal] = useState(false);
@@ -315,48 +312,31 @@ export default function Demo() {
     getCapabilities();
   }, []);
 
-  // Load first 20 cards (FEATURED) immediately, then load rest in background
-  // Cards are displayed from END to START, so we build array in reverse: [NEW, MOST_VALUABLE, TOP_GAINERS, FEATURED]
+  // Helper function to shuffle cards randomly
+  const shuffleCards = (cards: CardData[]): CardData[] => {
+    const shuffled = [...cards];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Load all 60 cards upfront (FEATURED, TOP_GAINERS, NEW), then scramble them
   useEffect(() => {
     const loadCards = async () => {
       try {
         setIsInitialLoading(true);
 
-        // STEP 1: Load FEATURED cards first (shows immediately)
-        console.log("🎬 Loading FEATURED cards...");
-        const featuredData = await fetchZoraExplore("FEATURED");
+        // Load all three categories in parallel
+        console.log(
+          "🎬 Loading all cards from FEATURED, TOP_GAINERS, and NEW..."
+        );
+        const categories: ListType[] = ["FEATURED", "TOP_GAINERS", "NEW"];
 
-        if (featuredData && featuredData.exploreList?.edges) {
-          const featuredCards = transformZoraToCards(featuredData);
-
-          if (featuredCards && featuredCards.length > 0) {
-            const taggedFeatured = featuredCards.map((card) => ({
-              ...card,
-              category: "FEATURED" as ListType,
-            }));
-
-            setAllCards(taggedFeatured);
-            setCurrentIndex(taggedFeatured.length - 1);
-            console.log(
-              `✅ Loaded ${featuredCards.length} FEATURED cards - Ready to swipe!`
-            );
-          }
-        }
-
-        setIsInitialLoading(false);
-
-        // STEP 2: Load ALL remaining cards, then replace the entire array
-        const remainingCategories: ListType[] = [
-          "TOP_GAINERS",
-          "MOST_VALUABLE",
-          "NEW",
-        ];
-
-        const backgroundCards: CardData[] = [];
-
-        for (const category of remainingCategories) {
+        const allCardPromises = categories.map(async (category) => {
           try {
-            console.log(`📥 Background loading ${category} cards...`);
+            console.log(`📥 Loading ${category} cards...`);
             const data = await fetchZoraExplore(category);
 
             if (data && data.exploreList?.edges) {
@@ -367,47 +347,34 @@ export default function Demo() {
                   ...card,
                   category: category,
                 }));
-
-                backgroundCards.push(...taggedCards);
                 console.log(`✅ Loaded ${cards.length} ${category} cards`);
+                return taggedCards;
               }
             }
+            return [];
           } catch (error) {
             console.error(`Error loading ${category}:`, error);
+            return [];
           }
-        }
+        });
 
-        // Now append all background cards at once (in reverse order for display)
-        if (backgroundCards.length > 0) {
-          const reversedCards = [...backgroundCards].reverse();
+        // Wait for all categories to load
+        const cardArrays = await Promise.all(allCardPromises);
+        const allLoadedCards = cardArrays.flat();
 
-          console.log(
-            `📦 About to add ${reversedCards.length} background cards`
-          );
+        console.log(`📦 Total cards loaded: ${allLoadedCards.length}`);
 
-          setAllCards((prevCards) => {
-            if (!prevCards || prevCards.length === 0) {
-              return reversedCards;
-            }
-            const newArray = [...reversedCards, ...prevCards];
-            console.log(
-              `📦 Total cards in array: ${newArray.length}, prev was ${prevCards.length}`
-            );
-            return newArray;
-          });
+        // Scramble all cards randomly
+        const scrambledCards = shuffleCards(allLoadedCards);
+        console.log(`🔀 Cards scrambled randomly`);
 
-          setCurrentIndex((prevIndex) => {
-            const newIndex = prevIndex + reversedCards.length;
-            console.log(`📍 Updated index from ${prevIndex} to ${newIndex}`);
-            return newIndex;
-          });
+        setAllCards(scrambledCards);
+        setCurrentIndex(scrambledCards.length - 1);
+        setIsInitialLoading(false);
 
-          console.log(
-            `✅ Background cards added, should now have 80 cards total`
-          );
-        }
-
-        console.log("🎉 All 80 cards loaded!");
+        console.log(
+          `🎉 All ${scrambledCards.length} cards loaded and ready to swipe!`
+        );
       } catch (error) {
         console.error("Error loading cards:", error);
         setIsInitialLoading(false);
@@ -416,6 +383,63 @@ export default function Demo() {
 
     loadCards();
   }, []);
+
+  // Refresh cards function
+  const handleRefreshCards = async () => {
+    setIsInitialLoading(true);
+
+    // Reload and scramble cards
+    try {
+      console.log("🔄 Refreshing cards...");
+      const categories: ListType[] = ["FEATURED", "TOP_GAINERS", "NEW"];
+
+      const allCardPromises = categories.map(async (category) => {
+        try {
+          console.log(`📥 Reloading ${category} cards...`);
+          const data = await fetchZoraExplore(category);
+
+          if (data && data.exploreList?.edges) {
+            const cards = transformZoraToCards(data);
+
+            if (cards && cards.length > 0) {
+              const taggedCards = cards.map((card) => ({
+                ...card,
+                category: category,
+              }));
+              console.log(`✅ Reloaded ${cards.length} ${category} cards`);
+              return taggedCards;
+            }
+          }
+          return [];
+        } catch (error) {
+          console.error(`Error reloading ${category}:`, error);
+          return [];
+        }
+      });
+
+      const cardArrays = await Promise.all(allCardPromises);
+      const allLoadedCards = cardArrays.flat();
+
+      const scrambledCards = shuffleCards(allLoadedCards);
+      console.log(`🔀 Cards reshuffled randomly`);
+
+      setAllCards(scrambledCards);
+      setCurrentIndex(scrambledCards.length - 1);
+      setIsInitialLoading(false);
+
+      console.log(`🎉 Refreshed ${scrambledCards.length} cards!`);
+
+      // Trigger haptic feedback
+      try {
+        await sdk.haptics.notificationOccurred("success");
+      } catch (error) {
+        console.log("Haptics not supported:", error);
+      }
+    } catch (error) {
+      console.error("Error refreshing cards:", error);
+      setIsInitialLoading(false);
+    }
+  };
 
   // No progressive loading - all cards loaded upfront
 
@@ -433,14 +457,6 @@ export default function Demo() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTabMenu]);
-
-  // Detect when all cards are done
-  useEffect(() => {
-    // Show popup when user has swiped through all cards
-    if (!isInitialLoading && currentIndex < 0 && allCards.length > 0) {
-      setShowAllDoneMessage(true);
-    }
-  }, [currentIndex, isInitialLoading, allCards.length]);
 
   const walletActionDefinitions: WalletActionDefinition[] = [];
 
@@ -703,7 +719,7 @@ export default function Demo() {
                   {/* Loading Text */}
                   <div className="absolute -bottom-8 left-0 right-0 text-center">
                     <p className="text-sm text-muted-foreground animate-pulse">
-                      Loading amazing tokens...
+                      Loading 60 tokens...
                     </p>
                   </div>
                 </div>
@@ -733,62 +749,14 @@ export default function Demo() {
                 {/* Swipe Cards */}
                 <SwipeCards
                   cards={allCards.length > 0 ? allCards : undefined}
-                  initialIndex={currentIndex}
+                  initialIndex={allCards.length - 1}
                   onBuy={handleBuy}
                   onPass={handlePass}
                   onIndexChange={handleSwipeProgress}
+                  onRefreshCards={handleRefreshCards}
+                  onViewBuyList={() => setActiveTab("buylist")}
+                  totalCardsCount={allCards.length}
                 />
-              </div>
-            )}
-
-            {/* All Done Popup */}
-            {showAllDoneMessage && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-scale-in">
-                  <div className="mb-6">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="text-2xl font-bold text-foreground mb-3">
-                      You&apos;re All Caught Up!
-                    </h2>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      You&apos;ve swiped through all available tokens. Come back
-                      in a bit for fresh new cards to discover!
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setShowAllDoneMessage(false)}
-                      className="w-full py-3 px-6 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Got it!
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab("buylist")}
-                      className="w-full py-3 px-6 bg-gray-100 text-foreground rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                    >
-                      View Buy List
-                    </button>
-                  </div>
-                </div>
-
-                <style jsx>{`
-                  @keyframes scale-in {
-                    from {
-                      opacity: 0;
-                      transform: scale(0.9);
-                    }
-                    to {
-                      opacity: 1;
-                      transform: scale(1);
-                    }
-                  }
-
-                  .animate-scale-in {
-                    animation: scale-in 0.3s ease-out;
-                  }
-                `}</style>
               </div>
             )}
           </div>
