@@ -1,9 +1,10 @@
 export const minikitConfig = {
   accountAssociation: {
-    // this will be added in step 5
-    header: "",
-    payload: "",
-    signature: "",
+    header:
+      "eyJmaWQiOjEzODYxODksInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0NTZGNWExYjM0MTE4YzVEOGY1ZmVjMDhlYjREYTc2Y0JBZmMzQkQ4In0",
+    payload: "eyJkb21haW4iOiJiYXNlLXN3aXBlci52ZXJjZWwuYXBwIn0",
+    signature:
+      "j57ZkIsDuRnJm9529PpTNN0ZRo82vDpSiWj/0+x9HWkDZpF4Agfy7+6/2bQ7oXR4l0LHSShfnsqLWtrdRRyY6Bs=",
   },
   miniapp: {
     version: "1",
@@ -47,7 +48,10 @@ export const minikitConfig = {
       "https://raw.githubusercontent.com/MikePawel/Base_Swiper/refs/heads/main/public/banner.png",
   },
   baseBuilder: {
-    allowedAddresses: ["0xE8597d4f1faCa468b1cfB34730627B56923629dD"],
+    allowedAddresses: [
+      "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
+      "mikepawel.base.eth",
+    ],
     ownerAddress: "0xE8597d4f1faCa468b1cfB34730627B56923629dD",
   },
 } as const;
